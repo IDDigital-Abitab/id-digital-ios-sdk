@@ -1,0 +1,49 @@
+/*
+  Localizable.strings
+  id_digital_mobile_app
+
+  Created by Jeremias Araujo on 19/10/23.
+  
+*/
+
+"amplify_ui_liveness_get_ready_page_title" = "Prueba de vida";
+"amplify_ui_liveness_get_ready_page_description" = "Pasarás por un proceso de verificación facial para demostrar que sos una persona real. El brillo de tu pantalla se configurará temporalmente al 100% para obtener la máxima precisión.";
+"amplify_ui_liveness_get_ready_photosensitivity_title" = "Advertencia de fotosensibilidad";
+"amplify_ui_liveness_get_ready_photosensitivity_description" = "Esta verificación muestra luces de colores. Tené precaución si sos fotosensible.";
+"amplify_ui_liveness_get_ready_photosensitivity_icon_a11y" = "Información de fotosensibilidad";
+"amplify_ui_liveness_get_ready_photosensitivity_dialog_title" = "Advertencia de fotosensibilidad";
+"amplify_ui_liveness_get_ready_photosensitivity_dialog_description" = "Un pequeño porcentaje de personas puede experimentar convulsiones epilépticas al estar expuestas a luces de colores. Tené precaución si vos o alguien de tu familia tiene una condición epiléptica.";
+"amplify_ui_liveness_get_ready_steps_title" = "Seguí estas instrucciones para completar la verificación:";
+"amplify_ui_liveness_get_ready_face_not_covered" = "Asegurate de que tu cara no esté cubierto con lentes de sol.";
+"amplify_ui_liveness_get_ready_lighting" = "Movete a un lugar bien iluminado que no esté directamente bajo la luz del sol.";
+"amplify_ui_liveness_get_ready_fit_face" = "Cuando aparezca un óvalo, colocá tu cara dentro del óvalo.";
+"amplify_ui_liveness_get_ready_begin_check" = "Iniciar verificación";
+"amplify_ui_liveness_get_ready_good_fit_example" = "Posición adecuada";
+"amplify_ui_liveness_get_ready_too_far_example" = "Demasiado lejos";
+"amplify_ui_liveness_challenge_recording_indicator_label" = "REC";
+"amplify_ui_liveness_challenge_instruction_hold_face_during_countdown" = "Mantené la posición de tu rostro durante la cuenta regresiva.";
+"amplify_ui_liveness_challenge_instruction_hold_face_during_freshness" = "Mantené tu rostro en el óvalo mientras haya luces de colores.";
+"amplify_ui_liveness_challenge_instruction_move_face_back" = "Alejate";
+"amplify_ui_liveness_challenge_instruction_move_face_closer" = "Acercate";
+"amplify_ui_liveness_challenge_instruction_move_face" = "Acercate";
+"amplify_ui_liveness_challenge_instruction_move_face_in_front_of_camera" = "Colocá tu cara frente a la cámara";
+"amplify_ui_liveness_challenge_instruction_multiple_faces_detected" = "Asegurate de que solo haya una cara frente a la cámara";
+"amplify_ui_liveness_challenge_instruction_hold_still" = "Mantenete quieto";
+"amplify_ui_liveness_challenge_connecting" = "Conectando...";
+"amplify_ui_liveness_challenge_verifying" = "Verificando";
+"amplify_ui_liveness_challenge_cancel_a11y" = "Cancelar verificación";
+"amplify_ui_liveness_camera_setting_alert_title" = "Cambiá la configuración de la cámara";
+"amplify_ui_liveness_camera_setting_alert_message" = "Habilitá el permiso de cámara en la configuración.";
+"amplify_ui_liveness_camera_setting_alert_update_setting_button_text" = "Actualizar configuración";
+"amplify_ui_liveness_camera_setting_alert_not_now_button_text" = "Ahora no";
+"amplify_ui_liveness_close_button_a11y" = "Cerrar";
+"amplify_ui_liveness_face_not_prepared_reason_pendingCheck" = "";
+"amplify_ui_liveness_face_not_prepared_reason_not_in_oval" = "Mové tu rostro para que encaje en el óvalo";
+"amplify_ui_liveness_face_not_prepared_reason_move_face_closer" = "Acercate";
+"amplify_ui_liveness_face_not_prepared_reason_move_face_right" = "Movete hacia la derecha";
+"amplify_ui_liveness_face_not_prepared_reason_move_face_left" = "Movete hacia la izquierda";
+"amplify_ui_liveness_face_not_prepared_reason_move_to_dimmer_area" = "Movete a un lugar menos iluminado";
+"amplify_ui_liveness_face_not_prepared_reason_move_to_brighter_area" = "Movete a un lugar más iluminado";
+"amplify_ui_liveness_face_not_prepared_reason_no_face" = "Colocá tu rostro frente a la cámara";
+"amplify_ui_liveness_face_not_prepared_reason_multiple_faces" = "Asegurate de que solo haya un rostro frente a la cámara";
+"amplify_ui_liveness_face_not_prepared_reason_face_too_close" = "Alejate";
