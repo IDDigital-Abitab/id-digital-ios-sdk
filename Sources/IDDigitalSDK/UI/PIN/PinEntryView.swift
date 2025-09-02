@@ -32,7 +32,7 @@ struct PinEntryView: View {
         CustomTopBar(onClose: onClose)
         
         VStack {
-          Text(shouldShowBiometricToggle ? "Creá tu PIN" : "Ingresá tu PIN")
+          Text("Ingresá tu PIN")
             .font(.headlineLarge)
             .foregroundColor(.abitabOnSurface)
             .padding(.top, 32)
