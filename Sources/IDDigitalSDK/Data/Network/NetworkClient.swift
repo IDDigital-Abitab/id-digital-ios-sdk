@@ -17,6 +17,7 @@ protocol NetworkClient {
 
 final class DefaultNetworkClient: NetworkClient {
   @Injected(\.apiKey) private var apiKey
+  @Injected(\.environment) private var environment
   @Injected(\.deviceIdentifierProvider) private var deviceIdentifierProvider
   @Injected(\.deviceAssociationStorage) private var deviceAssociationStorage
   
