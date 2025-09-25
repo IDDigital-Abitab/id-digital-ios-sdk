@@ -20,8 +20,14 @@ final class DefaultNetworkClient: NetworkClient {
   @Injected(\.deviceIdentifierProvider) private var deviceIdentifierProvider
   @Injected(\.deviceAssociationStorage) private var deviceAssociationStorage
   
-//  private let baseUrl = "http://192.168.1.18:8000/api/v2/sdk"
-  private let baseUrl = "https://auth.identificaciondigital.com.uy/api/v2/sdk"
+  private var baseUrl: String {
+    switch environment {
+    case .staging:
+      return "https://auth.identificaciondigital.com.uy/api/v2/sdk"
+    case .production:
+      return "https://auth.identidaddigital.com.uy/api/v2/sdk"
+    }
+  }
   private let urlSession: URLSession
   private let encoder: JSONEncoder
   private let decoder: JSONDecoder
