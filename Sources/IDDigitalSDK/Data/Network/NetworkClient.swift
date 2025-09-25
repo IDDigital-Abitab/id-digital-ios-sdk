@@ -37,9 +37,14 @@ final class DefaultNetworkClient: NetworkClient {
     self.encoder = JSONEncoder()
     self.encoder.keyEncodingStrategy = .convertToSnakeCase
     
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSSSXXXXX"
+    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+    dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+    
     self.decoder = JSONDecoder()
     self.decoder.keyDecodingStrategy = .convertFromSnakeCase
-    self.decoder.dateDecodingStrategy = .iso8601
+    self.decoder.dateDecodingStrategy = .formatted(dateFormatter)
   }
   
   func get<T: Decodable>(path: String) async throws -> T {
