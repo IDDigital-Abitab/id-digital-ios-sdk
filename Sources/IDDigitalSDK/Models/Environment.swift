@@ -1,6 +1,6 @@
 import Foundation
 
-public enum IDDigitalSDKEnvironment: String {
+public enum IDDigitalSDKEnvironment: Sendable {
     case staging
     case production
 }

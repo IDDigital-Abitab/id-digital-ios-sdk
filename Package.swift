@@ -16,8 +16,8 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/hmlongco/Factory", from: "2.5.3"),
-    .package(url: "https://github.com/aws-amplify/amplify-swift", from: "2.49.0"),
-    .package(url: "https://github.com/aws-amplify/amplify-ui-swift-liveness", from: "1.4.1"),
+    .package(url: "https://github.com/aws-amplify/amplify-swift", from: "2.51.0"),
+    .package(url: "https://github.com/aws-amplify/amplify-ui-swift-liveness", from: "1.4.2"),
     .package(url: "https://github.com/airbnb/lottie-spm.git", from: "4.5.2")
   ],
   targets: [
