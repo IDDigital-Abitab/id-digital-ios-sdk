@@ -7,6 +7,9 @@ extension Container {
   var apiKey: Factory<String?> {
     self { nil }.singleton
   }
+  var environment: Factory<IDDigitalSDKEnvironment> {
+    self { .production }.singleton // Production by default
+  }
   
   // --- Services ---
   var deviceIdentifierProvider: Factory<DeviceIdentifierProviding> { self { DeviceIdentifierProvider() }.singleton }

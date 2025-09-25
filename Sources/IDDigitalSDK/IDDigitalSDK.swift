@@ -10,13 +10,15 @@ public final actor IDDigitalSDK {
   
   private init() {}
   
-  public func initialize(apiKey: String) {
+  public func initialize(apiKey: String, environment: IDDigitalSDKEnvironment) {
+    
     guard !isInitialized else {
       print("IDDigitalSDK has already been initialized.")
       return
     }
     
     Container.shared.apiKey.register { apiKey }
+    Container.shared.environment.register { environment }
     
     Task {
       await AmplifyInitializer.initialize()
