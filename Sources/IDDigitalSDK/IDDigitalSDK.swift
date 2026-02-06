@@ -10,20 +10,19 @@ public final actor IDDigitalSDK {
   
   private init() {}
   
-  public func initialize(apiKey: String, environment: IDDigitalSDKEnvironment) {
-    
+  public func initialize(
+    apiKey: String,
+    environment: IDDigitalSDKEnvironment,
+    cognitoAppClientIdOverride: String? = nil
+  ) async throws {
     guard !isInitialized else {
       print("IDDigitalSDK has already been initialized.")
       return
     }
-    
     Container.shared.apiKey.register { apiKey }
     Container.shared.environment.register { environment }
-    
-    Task {
-      await AmplifyInitializer.initialize()
-    }
-    
+    Container.shared.cognitoAppClientIdOverride.register { cognitoAppClientIdOverride }
+    try await AmplifyInitializer.initialize()
     self.isInitialized = true
     print("IDDigitalSDK initialized successfully.")
   }
@@ -66,6 +65,12 @@ public final actor IDDigitalSDK {
     return association != nil
   }
   
+  public func getDeviceAssociation() async throws -> DeviceAssociation? {
+    try ensureInitialized()
+    let storage = Container.shared.deviceAssociationStorage()
+    return await storage.get()
+  }
+  
   public func removeAssociation() async {
     do {
       let useCase = Container.shared.removeAssociationUseCase()
@@ -90,5 +95,27 @@ public final actor IDDigitalSDK {
     )
     
     try await coordinator.start()
+  }
+  
+  public func sendToKeycloak(
+    tabId: String,
+    sessionCode: String,
+    clientId: String,
+    realm: String,
+    sdkToken: String
+  ) async throws -> String {
+    try ensureInitialized()
+    do {
+      let keycloakService = Container.shared.keycloakService()
+      return try await keycloakService.sendAuthenticationData(
+        tabId: tabId,
+        sessionCode: sessionCode,
+        clientId: clientId,
+        realm: realm,
+        sdkToken: sdkToken
+      )
+    } catch {
+      throw error.toIDDigitalError()
+    }
   }
 }

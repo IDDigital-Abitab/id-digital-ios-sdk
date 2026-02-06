@@ -1,3 +1,4 @@
+import Foundation
 import FactoryKit
 
 final class ValidationSessionService {
@@ -60,5 +61,50 @@ final class ValidationSessionService {
     
     let response: ValidationSession = try await networkClient.post(path: "validations/", body: body)
     return response
+  }
+
+  // MARK: - Challenge execute/validate (for when backend supports them; not exposed in public API yet)
+
+  func executeChallenge(challengeId: String, data: Record) async throws {
+    let (responseData, response) = try await networkClient.postWithJSONBody(
+      path: "challenges/\(challengeId)/execute/",
+      body: data
+    )
+    guard (200...299).contains(response.statusCode) else {
+      let responseBody = String(data: responseData, encoding: .utf8)
+      switch response.statusCode {
+      case 400, 404: throw IDDigitalError.badResponse(statusCode: response.statusCode, responseBody: responseBody)
+      case 500...599: throw IDDigitalError.serviceUnavailable(statusCode: response.statusCode, responseBody: responseBody)
+      default: throw IDDigitalError.unexpectedResponse(statusCode: response.statusCode, responseBody: responseBody)
+      }
+    }
+  }
+
+  func validateChallenge(challengeId: String, data: Record) async throws -> Bool {
+    let (responseData, response) = try await networkClient.postWithJSONBody(
+      path: "challenges/\(challengeId)/validate/",
+      body: data
+    )
+    if (200...299).contains(response.statusCode) {
+      return true
+    }
+    let responseBody = String(data: responseData, encoding: .utf8)
+    if response.statusCode == 400 || response.statusCode == 404 {
+      let decoder = JSONDecoder()
+      decoder.keyDecodingStrategy = .convertFromSnakeCase
+      if let errorResponse = try? decoder.decode(ErrorResponse.self, from: responseData) {
+        if errorResponse.code == "invalid-pin" {
+          return false
+        }
+        if errorResponse.code == "too-many-attempts" {
+          throw IDDigitalError.tooManyAttempts
+        }
+      }
+      throw IDDigitalError.badResponse(statusCode: response.statusCode, responseBody: responseBody)
+    }
+    if (500...599).contains(response.statusCode) {
+      throw IDDigitalError.serviceUnavailable(statusCode: response.statusCode, responseBody: responseBody)
+    }
+    throw IDDigitalError.unexpectedResponse(statusCode: response.statusCode, responseBody: responseBody)
   }
 }

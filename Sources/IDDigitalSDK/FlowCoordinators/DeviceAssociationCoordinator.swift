@@ -33,8 +33,20 @@ final class DeviceAssociationCoordinator {
     
     try await IDDigitalSDK.shared.removeAssociation()
     
+    // TODO: Remover cuando el backend envíe idToken correctamente
+    let associationToSave: DeviceAssociation
+    if let idToken = newDeviceAssociation.idToken {
+      associationToSave = newDeviceAssociation
+    } else {
+      associationToSave = DeviceAssociation(
+        token: newDeviceAssociation.token,
+        document: newDeviceAssociation.document,
+        createdAt: newDeviceAssociation.createdAt,
+        idToken: "TEMP_ID_TOKEN_PENDING_BACKEND"
+      )
+    }
     let storage = Container.shared.deviceAssociationStorage()
-    await storage.save(association: newDeviceAssociation)
+    await storage.save(association: associationToSave)
     
     if let result = pinResult, result.saveBiometrics {
       let pinManager = Container.shared.pinDataStoreManager()
@@ -44,7 +56,8 @@ final class DeviceAssociationCoordinator {
     try await presentSuccess()
     navigationController?.dismiss(animated: true)
     
-    return newDeviceAssociation.token
+    // TODO: Remover cuando el backend envíe idToken correctamente
+    return newDeviceAssociation.idToken ?? "TEMP_ID_TOKEN_PENDING_BACKEND"
   }
   
   private func startDeviceAssociation() async throws -> ValidationSession {

@@ -7,7 +7,7 @@
 
 
 struct ConfigData: Decodable {
-    let cognitoAppClientId: String
+    let cognitoAppClientId: String?
     let cognitoUserPoolId: String
     let cognitoIdentityPoolId: String
     let region: String
