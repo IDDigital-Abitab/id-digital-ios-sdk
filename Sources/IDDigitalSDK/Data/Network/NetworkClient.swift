@@ -12,6 +12,8 @@ protocol NetworkClient {
   func get<T: Decodable>(path: String) async throws -> T
   func post<T: Decodable>(path: String, body: some Encodable) async throws -> T
   func postAndExpectEmptyResponse(path: String, body: some Encodable) async throws
+  /// POST with JSON body from a dictionary. Returns raw response for endpoints that don't use ApiResponse envelope (e.g. challenge execute/validate).
+  func postWithJSONBody(path: String, body: [String: Any]) async throws -> (Data, HTTPURLResponse)
   func delete(path: String) async throws
 }
 
@@ -49,23 +51,31 @@ final class DefaultNetworkClient: NetworkClient {
   }
   
   func get<T: Decodable>(path: String) async throws -> T {
-    let (data, _) = try await makeRequest(path: path, method: "GET", body: EmptyBody())
-    
+    let (data, response) = try await makeRequest(path: path, method: "GET", body: EmptyBody())
     do {
       let apiResponse = try decoder.decode(ApiResponse<T>.self, from: data)
       return apiResponse.data
     } catch {
+      let raw = String(data: data, encoding: .utf8) ?? "(no string)"
+      #if DEBUG
+      print("[IDDigitalSDK] GET decode failed for \(response.url?.absoluteString ?? "?"): \(error.localizedDescription)")
+      print("[IDDigitalSDK] Raw response: \(raw.prefix(500))")
+      #endif
       throw IDDigitalError.badResponse(statusCode: -1, responseBody: "JSON decoding failed: \(error.localizedDescription)")
     }
   }
-  
+
   func post<T: Decodable>(path: String, body: some Encodable) async throws -> T {
-    let (data, _) = try await makeRequest(path: path, method: "POST", body: body)
-    
+    let (data, response) = try await makeRequest(path: path, method: "POST", body: body)
     do {
       let apiResponse = try decoder.decode(ApiResponse<T>.self, from: data)
       return apiResponse.data
     } catch {
+      let raw = String(data: data, encoding: .utf8) ?? "(no string)"
+      #if DEBUG
+      print("[IDDigitalSDK] POST decode failed for \(response.url?.absoluteString ?? "?"): \(error.localizedDescription)")
+      print("[IDDigitalSDK] Raw response: \(raw.prefix(500))")
+      #endif
       throw IDDigitalError.badResponse(statusCode: -1, responseBody: "JSON decoding failed: \(error.localizedDescription)")
     }
   }
@@ -73,62 +83,70 @@ final class DefaultNetworkClient: NetworkClient {
   func postAndExpectEmptyResponse(path: String, body: some Encodable) async throws {
     _ = try await makeRequest(path: path, method: "POST", body: body)
   }
-  
+
+  func postWithJSONBody(path: String, body: [String: Any]) async throws -> (Data, HTTPURLResponse) {
+    let bodyData = try JSONSerialization.data(withJSONObject: body)
+    return try await makeRequestRaw(path: path, method: "POST", bodyData: bodyData)
+  }
+
   func delete(path: String) async throws {
     _ = try await makeRequest(path: path, method: "DELETE", body: EmptyBody())
   }
   
   private func makeRequest(path: String, method: String, body: some Encodable) async throws -> (Data, HTTPURLResponse) {
+    let bodyData: Data? = (body is EmptyBody) ? nil : try encoder.encode(body)
+    let (data, httpResponse) = try await makeRequestRaw(path: path, method: method, bodyData: bodyData)
+    guard (200...299).contains(httpResponse.statusCode) else {
+      let responseBody = String(data: data, encoding: .utf8)
+      logNetworkError(url: httpResponse.url, method: method, statusCode: httpResponse.statusCode, responseBody: responseBody)
+      if let errorData = responseBody?.data(using: .utf8),
+         let errorResponse = try? decoder.decode(ErrorResponse.self, from: errorData) {
+        if errorResponse.code == "invalid-pin" {
+          throw IDDigitalError.invalidPin(reason: "Incorrect PIN")
+        }
+        if errorResponse.code == "too-many-attempts" {
+          throw IDDigitalError.tooManyAttempts
+        }
+      }
+      switch httpResponse.statusCode {
+      case 400, 404: throw IDDigitalError.badResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
+      case 500...599: throw IDDigitalError.serviceUnavailable(statusCode: httpResponse.statusCode, responseBody: responseBody)
+      default: throw IDDigitalError.unexpectedResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
+      }
+    }
+    return (data, httpResponse)
+  }
+
+  private func logNetworkError(url: URL?, method: String, statusCode: Int, responseBody: String?) {
+    #if DEBUG
+    let body = responseBody ?? "(empty)"
+    print("[IDDigitalSDK] HTTP \(statusCode) \(method) \(url?.absoluteString ?? "?")")
+    print("[IDDigitalSDK] Response: \(body)")
+    #endif
+  }
+
+  /// Raw request; caller interprets status (used for challenge execute/validate).
+  private func makeRequestRaw(path: String, method: String, bodyData: Data?) async throws -> (Data, HTTPURLResponse) {
     guard let url = URL(string: "\(baseUrl)/\(path)") else {
       throw IDDigitalError.unknown(cause: nil)
     }
-    
     var request = URLRequest(url: url)
     request.httpMethod = method
     request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
-    
     if let apiKey = self.apiKey {
       request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
     }
-    
     let fingerprint = await deviceIdentifierProvider.getDeviceFingerprint()
     request.setValue(fingerprint, forHTTPHeaderField: "x-device-fingerprint")
-    
     if let association = await deviceAssociationStorage.get() {
       request.setValue("Bearer \(association.token)", forHTTPHeaderField: "Authorization")
     }
-    
-    if !(body is EmptyBody) {
-      request.httpBody = try encoder.encode(body)
-    }
-    
+    request.httpBody = bodyData
     do {
       let (data, response) = try await urlSession.data(for: request)
-      
       guard let httpResponse = response as? HTTPURLResponse else {
         throw IDDigitalError.unexpectedResponse(statusCode: -1, responseBody: nil)
       }
-      
-      guard (200...299).contains(httpResponse.statusCode) else {
-        let responseBody = String(data: data, encoding: .utf8)
-        if let errorData = responseBody?.data(using: .utf8),
-           let errorResponse = try? decoder.decode(ErrorResponse.self, from: errorData) {
-          if errorResponse.code == "invalid-pin" {
-            throw IDDigitalError.invalidPin(reason: "Incorrect PIN")
-          }
-          if errorResponse.code == "too-many-attempts" {
-            throw IDDigitalError.tooManyAttempts
-          }
-        }
-        
-        
-        switch httpResponse.statusCode {
-        case 400, 404: throw IDDigitalError.badResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
-        case 500...599: throw IDDigitalError.serviceUnavailable(statusCode: httpResponse.statusCode, responseBody: responseBody)
-        default: throw IDDigitalError.unexpectedResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
-        }
-      }
-      
       return (data, httpResponse)
     } catch {
       if error is IDDigitalError { throw error }

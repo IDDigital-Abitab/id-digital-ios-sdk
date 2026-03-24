@@ -32,7 +32,7 @@ final class DeviceAssociationCoordinator {
     let newDeviceAssociation = try await completeAssociationUseCase.execute(id: validationSession.id)
     
     try await IDDigitalSDK.shared.removeAssociation()
-    
+
     let storage = Container.shared.deviceAssociationStorage()
     await storage.save(association: newDeviceAssociation)
     
@@ -44,7 +44,8 @@ final class DeviceAssociationCoordinator {
     try await presentSuccess()
     navigationController?.dismiss(animated: true)
     
-    return newDeviceAssociation.token
+    // JWT from backend when the SDK client has an active secret; empty if omitted/null.
+    return newDeviceAssociation.idToken ?? ""
   }
   
   private func startDeviceAssociation() async throws -> ValidationSession {

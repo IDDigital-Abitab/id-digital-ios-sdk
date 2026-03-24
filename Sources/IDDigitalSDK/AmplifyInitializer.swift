@@ -4,13 +4,17 @@ import AWSCognitoAuthPlugin
 import FactoryKit
 
 final class AmplifyInitializer {
-  static func initialize() async{
-    
-    do {
-      let configService = Container.shared.configService()
-      let configData = try await configService.getConfiguration()
-      
-      let authConfiguration = AuthCategoryConfiguration(
+  static func initialize() async throws {
+    let configService = Container.shared.configService()
+    let configData = try await configService.getConfiguration()
+    let override = Container.shared.cognitoAppClientIdOverride()
+    let appClientId: String? = (configData.cognitoAppClientId.flatMap { $0.isEmpty ? nil : $0 }) ?? (override.flatMap { $0.isEmpty ? nil : $0 })
+    guard let appClientId = appClientId, !appClientId.isEmpty else {
+      print("[IDDigitalSDK] cognitoAppClientId null o vacío en initialize/ (y sin override) — Amplify no se configurará. Liveness puede fallar en dispositivo.")
+      return
+    }
+
+    let authConfiguration = AuthCategoryConfiguration(
         plugins: [
           "awsCognitoAuthPlugin": .object([
             "UserAgent": .string("aws-amplify/swift"),
@@ -29,7 +33,7 @@ final class AmplifyInitializer {
             "CognitoUserPool": .object([
               "Default": .object([
                 "PoolId": .string(configData.cognitoUserPoolId),
-                "AppClientId": .string(configData.cognitoAppClientId),
+                "AppClientId": .string(appClientId),
                 "Region": .string(configData.region)
               ])
             ]),
@@ -50,16 +54,10 @@ final class AmplifyInitializer {
             ])
           ])
         ]
-      )
-      
-      let amplifyConfiguration = AmplifyConfiguration(auth: authConfiguration)
-      
-      try Amplify.add(plugin: AWSCognitoAuthPlugin())
-      try Amplify.configure(amplifyConfiguration)
-      
-      print("Amplify configured successfully from SDK bundle.")
-    } catch {
-      print("Failed to initialize Amplify with error: \(error)")
-    }
+    )
+    let amplifyConfiguration = AmplifyConfiguration(auth: authConfiguration)
+    try Amplify.add(plugin: AWSCognitoAuthPlugin())
+    try Amplify.configure(amplifyConfiguration)
+    print("Amplify configured successfully from SDK bundle.")
   }
 }

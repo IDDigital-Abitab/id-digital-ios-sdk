@@ -10,6 +10,10 @@ extension Container {
   var environment: Factory<IDDigitalSDKEnvironment> {
     self { .production }.singleton // Production by default
   }
+  /// Si el backend devuelve cognitoAppClientId null, se usa este valor (p. ej. desde la app demo).
+  var cognitoAppClientIdOverride: Factory<String?> {
+    self { nil }.singleton
+  }
   
   // --- Services ---
   var deviceIdentifierProvider: Factory<DeviceIdentifierProviding> { self { DeviceIdentifierProvider() }.singleton }
@@ -21,6 +25,9 @@ extension Container {
   var deviceAssociationStorage: Factory<DeviceAssociationStoring> { self { DeviceAssociationStorage() }.singleton }
   var configService: Factory<ConfigService> {
     self { ConfigService() }.singleton
+  }
+  var keycloakService: Factory<KeycloakService> {
+    self { KeycloakService() }.singleton
   }
   
   
