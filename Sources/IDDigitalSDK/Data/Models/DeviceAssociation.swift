@@ -2,7 +2,7 @@ public struct DeviceAssociation: Codable, Sendable {
   public let token: String
   public let document: Document
   public let createdAt: String
-  /// ID token from backend; nil until backend sends it. Use placeholder when persisting if nil.
+  /// OIDC ID Token (JWT) when the backend client has an active secret; `nil` if omitted.
   public let idToken: String?
 
   public init(token: String, document: Document, createdAt: String, idToken: String? = nil) {

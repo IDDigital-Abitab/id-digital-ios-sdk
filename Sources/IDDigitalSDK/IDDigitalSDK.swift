@@ -46,6 +46,7 @@ public final actor IDDigitalSDK {
   }
   
   
+  /// Completes device association and returns the ID token JWT, or an empty string if the backend did not include one.
   @MainActor
   public func associate(from presentingViewController: UIViewController, document: Document) async throws -> String {
     try await ensureInitialized()
@@ -97,6 +98,7 @@ public final actor IDDigitalSDK {
     try await coordinator.start()
   }
   
+  /// Sends the OIDC **ID token** (JWT from `DeviceAssociation.idToken`) to Keycloak as `sdk_token`.
   public func sendToKeycloak(
     tabId: String,
     sessionCode: String,
