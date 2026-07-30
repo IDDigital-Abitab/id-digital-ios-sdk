@@ -1,22 +1,19 @@
 import FactoryKit
 
 protocol ValidationSessionRepository {
-  func checkCanAssociate(document: Document) async throws -> Bool
-  func createDeviceAssociation(document: Document) async throws -> ValidationSession
+  func createDeviceAssociation(transactionId: String) async throws -> ValidationSession
   func completeDeviceAssociation(id: String) async throws -> DeviceAssociation
   func removeAssociation() async throws
   func createValidationSession(type: ChallengeType) async throws -> ValidationSession
+  func completeTransaction(transactionId: String, validationSessionId: String) async throws -> String?
+  func getPendingTransactions() async throws -> [PendingTransaction]
 }
 
 final class ValidationSessionRepositoryImpl: ValidationSessionRepository {
   @Injected(\.validationSessionService) private var service
   
-  func checkCanAssociate(document: Document) async throws -> Bool {
-    return try await service.checkCanAssociate(document: document)
-  }
-  
-  func createDeviceAssociation(document: Document) async throws -> ValidationSession {
-    return try await service.createDeviceAssociation(document: document)
+  func createDeviceAssociation(transactionId: String) async throws -> ValidationSession {
+    return try await service.createDeviceAssociation(transactionId: transactionId)
   }
   
   func completeDeviceAssociation(id: String) async throws -> DeviceAssociation {
@@ -29,5 +26,13 @@ final class ValidationSessionRepositoryImpl: ValidationSessionRepository {
   
   func createValidationSession(type: ChallengeType) async throws -> ValidationSession {
     return try await service.createValidationSession(type: type)
+  }
+
+  func completeTransaction(transactionId: String, validationSessionId: String) async throws -> String? {
+    try await service.completeTransaction(transactionId: transactionId, validationSessionId: validationSessionId)
+  }
+
+  func getPendingTransactions() async throws -> [PendingTransaction] {
+    try await service.getPendingTransactions()
   }
 }

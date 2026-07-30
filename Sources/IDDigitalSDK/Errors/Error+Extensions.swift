@@ -1,6 +1,6 @@
 import Foundation
 
-public extension Error {
+extension Error {
     /// Converts a generic Error into a specific IDDigitalError.
     func toIDDigitalError() -> IDDigitalError {
         if let idError = self as? IDDigitalError {

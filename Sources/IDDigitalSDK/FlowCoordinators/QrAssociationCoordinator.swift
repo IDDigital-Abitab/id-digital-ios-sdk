@@ -3,22 +3,32 @@ import FactoryKit
 import SwiftUI
 import LocalAuthentication
 
+/// QR cross-device variant of `DeviceAssociationCoordinator`: identical
+/// challenge flow (instructions -> liveness/pin), duplicated on purpose
+/// rather than sharing code with it (see .docs/sdk/cliente/08-qr-cross-device.md).
+///
+/// The only differences are: it starts with a QR scan step to obtain the
+/// `transactionId` (an opaque signed token, never parsed/validated here -
+/// the backend resolves the citizen from it), and on success it completes
+/// that OIDC transaction (`CompleteTransactionUseCase`) itself instead of
+/// just returning `idToken`/`validationSessionId` to the Integrator - there
+/// is no Integrator round-trip (push/deep link) to do that in this flow,
+/// since the citizen scanned the code directly from within this same app.
 @MainActor
-final class DeviceAssociationCoordinator {
+final class QrAssociationCoordinator {
   private let presentingViewController: UIViewController
-  private let transactionId: String
   private var navigationController: UINavigationController?
-  
-  init(presentingViewController: UIViewController, transactionId: String) {
+
+  init(presentingViewController: UIViewController) {
     self.presentingViewController = presentingViewController
-    self.transactionId = transactionId
   }
-  
-  func start() async throws -> (idToken: String, validationSessionId: String) {
-    let validationSession = try await startDeviceAssociation()
-    
+
+  func start() async throws -> String? {
+    let transactionId = try await scanQrCode()
+    let validationSession = try await startDeviceAssociation(transactionId: transactionId)
+
     var pinResult: (pin: String, saveBiometrics: Bool)?
-    
+
     for challenge in validationSession.challenges {
       switch challenge.type {
       case .pin:
@@ -27,38 +37,71 @@ final class DeviceAssociationCoordinator {
         try await runLivenessChallenge(for: challenge)
       }
     }
-    
+
     let completeAssociationUseCase = Container.shared.completeDeviceAssociationUseCase()
     let newDeviceAssociation = try await completeAssociationUseCase.execute(id: validationSession.id)
-    
+
     try await IDDigitalSDK.shared.removeAssociation()
 
     let storage = Container.shared.deviceAssociationStorage()
     await storage.save(association: newDeviceAssociation)
-    
+
     if let result = pinResult, result.saveBiometrics {
       let pinManager = Container.shared.pinDataStoreManager()
       await pinManager.savePinAndBiometricPreference(pin: result.pin, isEnabled: true)
     }
-    
+
     try await presentSuccess()
     navigationController?.dismiss(animated: true)
-    
-    // JWT from backend when the SDK client has an active secret; empty if omitted/null.
-    return (idToken: newDeviceAssociation.idToken ?? "", validationSessionId: validationSession.id)
+
+    let completeTransactionUseCase = Container.shared.completeTransactionUseCase()
+    return try await completeTransactionUseCase.execute(
+      transactionId: transactionId,
+      validationSessionId: validationSession.id
+    )
   }
-  
-  private func startDeviceAssociation() async throws -> ValidationSession {
+
+  private func scanQrCode() async throws -> String {
     return try await withCheckedThrowingContinuation { continuation in
       var hasResumed = false
-      
+
+      let scannerView = QRScannerView(
+        onScanned: { value in
+          if !hasResumed {
+            hasResumed = true
+            continuation.resume(returning: value)
+          }
+        },
+        onClose: {
+          if !hasResumed {
+            hasResumed = true
+            self.navigationController?.dismiss(animated: true)
+            continuation.resume(throwing: IDDigitalError.userCancelled())
+          }
+        }
+      )
+
+      let hostingController = UIHostingController(rootView: scannerView)
+
+      let navController = UINavigationController(rootViewController: hostingController)
+      navController.isNavigationBarHidden = true
+      self.navigationController = navController
+      navController.modalPresentationStyle = .fullScreen
+      presentingViewController.present(navController, animated: true)
+    }
+  }
+
+  private func startDeviceAssociation(transactionId: String) async throws -> ValidationSession {
+    return try await withCheckedThrowingContinuation { continuation in
+      var hasResumed = false
+
       let instructionsView = DeviceAssociationInstructionsView(
         onStart: {
           Task {
             do {
               let createUseCase = Container.shared.createDeviceAssociationUseCase()
-              let session = try await createUseCase.execute(transactionId: self.transactionId)
-              
+              let session = try await createUseCase.execute(transactionId: transactionId)
+
               if !hasResumed {
                 hasResumed = true
                 continuation.resume(returning: session)
@@ -79,34 +122,35 @@ final class DeviceAssociationCoordinator {
           }
         }
       )
-      
+
       let hostingController = UIHostingController(rootView: instructionsView)
-      
-      let navController = UINavigationController(rootViewController: hostingController)
-      navController.isNavigationBarHidden = true
-      self.navigationController = navController
-      navController.modalPresentationStyle = .fullScreen
-      presentingViewController.present(navController, animated: true)
+      // A diferencia de DeviceAssociationCoordinator, acá se hace push sobre
+      // el navigationController que ya presentó el paso de escaneo QR, en vez
+      // de presentar uno nuevo.
+      self.navigationController?.pushViewController(hostingController, animated: true)
     }
   }
-  
+
   private func runPinChallenge(for challenge: Challenge) async throws -> (String, Bool) {
     let executePinUseCase = Container.shared.executePinChallengeUseCase()
     let pinLastUpdated = try await executePinUseCase.execute(challengeId: challenge.id)
-    
+
     return try await presentPinEntry(
       challengeId: challenge.id,
       shouldShowBiometricToggle: true,
       pinLastUpdated: pinLastUpdated
     )
-    
   }
-  
-  private func presentPinEntry(challengeId: String, shouldShowBiometricToggle: Bool, pinLastUpdated: Date?) async throws -> (String, Bool) {
+
+  private func presentPinEntry(
+    challengeId: String,
+    shouldShowBiometricToggle: Bool,
+    pinLastUpdated: Date?
+  ) async throws -> (String, Bool) {
     let pinManager = Container.shared.pinDataStoreManager()
     let isBiometricEnabled = await pinManager.isBiometricPinEnabled()
     let pinRecentlyChanged = pinLastUpdated != nil
-    
+
     return try await withCheckedThrowingContinuation { continuation in
       var hasResumed = false
       let pinView = PinEntryView(
@@ -139,12 +183,12 @@ final class DeviceAssociationCoordinator {
         isBiometricEnabled: isBiometricEnabled,
         pinRecentlyChanged: pinRecentlyChanged
       )
-      
+
       let hostingController = UIHostingController(rootView: pinView)
       navigationController?.pushViewController(hostingController, animated: true)
     }
   }
-  
+
   private func runLivenessChallenge(for challenge: Challenge) async throws {
     return try await withCheckedThrowingContinuation { continuation in
       var hasResumed = false
@@ -170,14 +214,13 @@ final class DeviceAssociationCoordinator {
             continuation.resume(throwing: IDDigitalError.userCancelled())
           }
         }
-        
       )
-      
+
       let hostingController = UIHostingController(rootView: livenessView)
       self.navigationController?.pushViewController(hostingController, animated: true)
     }
   }
-  
+
   private func presentSuccess() async throws {
     return try await withCheckedThrowingContinuation { continuation in
       let successView = DeviceAssociationSuccessView() {

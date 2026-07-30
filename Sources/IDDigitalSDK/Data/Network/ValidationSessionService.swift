@@ -4,40 +4,15 @@ import FactoryKit
 final class ValidationSessionService {
   @Injected(\.networkClient) private var networkClient
   
-  func checkCanAssociate(document: Document) async throws -> Bool {
+  /// - Parameter transactionId: The pending `TransactionOIDC` id (raw or signed token, see
+  ///   `IDDigitalSDK.associate(from:transactionId:)`). The backend resolves the citizen from
+  ///   this transaction instead of requiring a document.
+  func createDeviceAssociation(transactionId: String) async throws -> ValidationSession {
     struct RequestBody: Encodable {
-      let document_number: String
-      let document_type: String
-      let document_country: String
+      let transactionId: String
     }
     
-    let body = RequestBody(
-      document_number: document.number,
-      document_type: document.type ?? "ci",
-      document_country: document.country ?? "UY"
-    )
-    
-    struct ResponseData: Decodable {
-      let canAssociate: Bool
-    }
-    
-    let response: ResponseData = try await networkClient.post(path: "can-associate/", body: body)
-    
-    return response.canAssociate
-  }
-  
-  func createDeviceAssociation(document: Document) async throws -> ValidationSession {
-    struct RequestBody: Encodable {
-      let documentNumber: String
-      let documentType: String
-      let documentCountry: String
-    }
-    
-    let body = RequestBody(
-      documentNumber: document.number,
-      documentType: document.type ?? "ci",
-      documentCountry: document.country ?? "UY"
-    )
+    let body = RequestBody(transactionId: transactionId)
     
     let response: ValidationSession = try await networkClient.post(path: "associations/", body: body)
     return response
@@ -63,48 +38,52 @@ final class ValidationSessionService {
     return response
   }
 
-  // MARK: - Challenge execute/validate (for when backend supports them; not exposed in public API yet)
-
-  func executeChallenge(challengeId: String, data: Record) async throws {
+  /// Completes a pending OIDC transaction (cross-device / same-device web bridge flow)
+  /// using an already-completed `ValidationSession`. Backend:
+  /// `POST /api/v2/sdk/complete-transaction/`.
+  ///
+  /// - Returns: the `finishUrl` the backend generated for this transaction, or nil if it
+  ///   couldn't generate one (the web bridge's own polling is always the fallback in that
+  ///   case).
+  func completeTransaction(transactionId: String, validationSessionId: String) async throws -> String? {
     let (responseData, response) = try await networkClient.postWithJSONBody(
-      path: "challenges/\(challengeId)/execute/",
-      body: data
-    )
-    guard (200...299).contains(response.statusCode) else {
-      let responseBody = String(data: responseData, encoding: .utf8)
-      switch response.statusCode {
-      case 400, 404: throw IDDigitalError.badResponse(statusCode: response.statusCode, responseBody: responseBody)
-      case 500...599: throw IDDigitalError.serviceUnavailable(statusCode: response.statusCode, responseBody: responseBody)
-      default: throw IDDigitalError.unexpectedResponse(statusCode: response.statusCode, responseBody: responseBody)
-      }
-    }
-  }
-
-  func validateChallenge(challengeId: String, data: Record) async throws -> Bool {
-    let (responseData, response) = try await networkClient.postWithJSONBody(
-      path: "challenges/\(challengeId)/validate/",
-      body: data
+      path: "complete-transaction/",
+      body: [
+        "transaction_id": transactionId,
+        "validation_session_id": validationSessionId
+      ]
     )
     if (200...299).contains(response.statusCode) {
-      return true
+      struct ResponseData: Decodable {
+        let finishUrl: String?
+      }
+      let apiResponse = try? JSONDecoder().decode(ApiResponse<ResponseData>.self, from: responseData)
+      return apiResponse?.data.finishUrl
     }
     let responseBody = String(data: responseData, encoding: .utf8)
-    if response.statusCode == 400 || response.statusCode == 404 {
-      let decoder = JSONDecoder()
-      decoder.keyDecodingStrategy = .convertFromSnakeCase
-      if let errorResponse = try? decoder.decode(ErrorResponse.self, from: responseData) {
-        if errorResponse.code == "invalid-pin" {
-          return false
-        }
-        if errorResponse.code == "too-many-attempts" {
-          throw IDDigitalError.tooManyAttempts
-        }
+    if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: responseData) {
+      switch errorResponse.code {
+      case "transaction-not-found": throw IDDigitalError.transactionNotFound
+      case "validation-session-not-found": throw IDDigitalError.validationSessionNotFound
+      case "session-has-uncompleted-challenges": throw IDDigitalError.sessionHasUncompletedChallenges
+      case "forbidden": throw IDDigitalError.forbidden
+      default: break
       }
-      throw IDDigitalError.badResponse(statusCode: response.statusCode, responseBody: responseBody)
     }
-    if (500...599).contains(response.statusCode) {
-      throw IDDigitalError.serviceUnavailable(statusCode: response.statusCode, responseBody: responseBody)
+    switch response.statusCode {
+    case 400, 401, 403, 404, 422: throw IDDigitalError.badResponse(statusCode: response.statusCode, responseBody: responseBody)
+    case 500...599: throw IDDigitalError.serviceUnavailable(statusCode: response.statusCode, responseBody: responseBody)
+    default: throw IDDigitalError.unexpectedResponse(statusCode: response.statusCode, responseBody: responseBody)
     }
-    throw IDDigitalError.unexpectedResponse(statusCode: response.statusCode, responseBody: responseBody)
   }
+
+  /// Lists pending OIDC transactions for the citizen behind the current
+  /// DeviceAssociation (bearer token added by `NetworkClient.makeRequestRaw`).
+  /// Used by `IDDigitalSDK.startActiveTransactionPolling` -
+  /// .docs/sdk/cliente/09-polling-transaccion-activa.md.
+  func getPendingTransactions() async throws -> [PendingTransaction] {
+    let response: PendingTransactionsResponse = try await networkClient.get(path: "transactions/pending/")
+    return response.transactions
+  }
+
 }

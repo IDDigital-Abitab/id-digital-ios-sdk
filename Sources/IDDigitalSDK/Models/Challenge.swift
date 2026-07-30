@@ -1,6 +1,6 @@
-public struct Challenge: Codable, Sendable {
-  public let id: String
-  public let type: ChallengeType
-  public let status: String
-  public let expirationDate: String
+struct Challenge: Codable, Sendable {
+  let id: String
+  let type: ChallengeType
+  let status: String
+  let expirationDate: String
 }

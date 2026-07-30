@@ -6,6 +6,7 @@ struct EmptyBody: Codable {}
 /// A helper struct to decode the specific error code from the backend on failure.
 struct ErrorResponse: Decodable {
   let code: String?
+  let message: String?
 }
 
 protocol NetworkClient {
@@ -20,10 +21,14 @@ protocol NetworkClient {
 final class DefaultNetworkClient: NetworkClient {
   @Injected(\.apiKey) private var apiKey
   @Injected(\.environment) private var environment
+  @Injected(\.customBaseUrl) private var customBaseUrl
   @Injected(\.deviceIdentifierProvider) private var deviceIdentifierProvider
   @Injected(\.deviceAssociationStorage) private var deviceAssociationStorage
   
   private var baseUrl: String {
+    if let customBaseUrl, !customBaseUrl.isEmpty {
+      return customBaseUrl.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
     switch environment {
     case .staging:
       return "https://auth.identificaciondigital.com.uy/api/v2/sdk"
@@ -107,9 +112,22 @@ final class DefaultNetworkClient: NetworkClient {
         if errorResponse.code == "too-many-attempts" {
           throw IDDigitalError.tooManyAttempts
         }
+        if errorResponse.code == "invalid-device-association-token" {
+          // Local storage said an association exists, but the backend no longer
+          // recognizes its token (e.g. deactivated/removed on ID Digital's side).
+          // Reusing .deviceNotAssociated lets callers (see IDDigitalSDK.createValidationSession)
+          // clear the stale local association and retry as a fresh association.
+          throw IDDigitalError.deviceNotAssociated
+        }
+        if errorResponse.code == "invalid-identity-document" {
+          throw IDDigitalError.invalidDocument(reason: errorResponse.message ?? responseBody ?? "Invalid identity document")
+        }
+        if errorResponse.code == "transaction-not-found" {
+          throw IDDigitalError.transactionNotFound
+        }
       }
       switch httpResponse.statusCode {
-      case 400, 404: throw IDDigitalError.badResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
+      case 400, 404, 422: throw IDDigitalError.badResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
       case 500...599: throw IDDigitalError.serviceUnavailable(statusCode: httpResponse.statusCode, responseBody: responseBody)
       default: throw IDDigitalError.unexpectedResponse(statusCode: httpResponse.statusCode, responseBody: responseBody)
       }

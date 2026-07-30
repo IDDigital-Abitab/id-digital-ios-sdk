@@ -34,6 +34,9 @@ let package = Package(
         .process("Resources"),
       ]
     ),
-    
+    .testTarget(
+      name: "IDDigitalSDKTests",
+      dependencies: ["IDDigitalSDK"]
+    ),
   ]
 )

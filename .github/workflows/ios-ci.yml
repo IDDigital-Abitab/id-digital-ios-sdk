@@ -1,0 +1,63 @@
+name: iOS CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build and test iOS package
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Show Apple toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Resolve package dependencies
+        run: xcodebuild -resolvePackageDependencies -scheme IDDigitalSDK
+
+      - name: Select available iPhone simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcrun simctl list > /dev/null
+          UDID="$(
+            xcrun simctl list devices available -j |
+              jq -r '[.devices[][] | select(.name | test("^iPhone"))][0].udid // empty'
+          )"
+          if [[ -z "$UDID" ]]; then
+            xcrun simctl list devices available
+            exit 1
+          fi
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build SDK for iOS Simulator
+        run: |
+          xcodebuild build \
+            -scheme IDDigitalSDK \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Run SDK tests
+        run: |
+          xcodebuild test \
+            -scheme IDDigitalSDK \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO
