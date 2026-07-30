@@ -66,6 +66,7 @@ jobs:
             echo "DocC archive not found at $DOCC_ARCHIVE"
             exit 1
           fi
+          mkdir -p "$DOCS_OUTPUT_PATH"
           xcrun docc process-archive transform-for-static-hosting \
             "$DOCC_ARCHIVE" \
             --output-path "$DOCS_OUTPUT_PATH"

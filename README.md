@@ -33,6 +33,8 @@ xcodebuild docbuild \
   -derivedDataPath .build/docc-derived-data \
   CODE_SIGNING_ALLOWED=NO
 
+mkdir -p .build/docc/html
+
 xcrun docc process-archive transform-for-static-hosting \
   .build/docc-derived-data/Build/Products/Debug-iphoneos/IDDigitalSDK.doccarchive \
   --output-path .build/docc/html
