@@ -2,6 +2,10 @@ import Foundation
 import UIKit
 import FactoryKit
 
+private struct LifecycleObserverToken: @unchecked Sendable {
+  let value: NSObjectProtocol
+}
+
 /// Polling de "transacción activa": canal redundante al push que replica el
 /// mecanismo ya usado por la app default de ID Digital (ver
 /// .docs/sdk/cliente/09-polling-transaccion-activa.md). Solo cubre login
@@ -24,11 +28,11 @@ actor ActiveTransactionPoller {
   private var isForeground = true
   private var isEnabled = false
   private var pollingTask: Task<Void, Never>?
-  private var lifecycleObservers: [NSObjectProtocol] = []
+  private var lifecycleObservers: [LifecycleObserverToken] = []
 
   deinit {
     let center = NotificationCenter.default
-    lifecycleObservers.forEach { center.removeObserver($0) }
+    lifecycleObservers.forEach { center.removeObserver($0.value) }
   }
 
   func start(intervalMs: UInt64, onTransactionDetected: @escaping @Sendable (String) -> Void) {
@@ -60,7 +64,10 @@ actor ActiveTransactionPoller {
     ) { [weak self] _ in
       Task { await self?.handleBackground() }
     }
-    lifecycleObservers = [didBecomeActive, willResignActive]
+    lifecycleObservers = [
+      LifecycleObserverToken(value: didBecomeActive),
+      LifecycleObserverToken(value: willResignActive),
+    ]
   }
 
   private func handleForeground() {
