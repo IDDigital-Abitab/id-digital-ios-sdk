@@ -18,8 +18,8 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      DERIVED_DATA_PATH: ${{ runner.temp }}/IDDigitalSDKDocCDerivedData
-      SOURCE_PACKAGES_PATH: ${{ runner.temp }}/IDDigitalSDKSourcePackages
+      DERIVED_DATA_PATH: .build/docc-derived-data
+      SOURCE_PACKAGES_PATH: .build/source-packages
       DOCS_OUTPUT_PATH: build/docc/html
 
     steps:

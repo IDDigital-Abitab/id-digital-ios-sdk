@@ -18,8 +18,8 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      DERIVED_DATA_PATH: ${{ runner.temp }}/IDDigitalSDKDerivedData
-      SOURCE_PACKAGES_PATH: ${{ runner.temp }}/IDDigitalSDKSourcePackages
+      DERIVED_DATA_PATH: .build/ci-derived-data
+      SOURCE_PACKAGES_PATH: .build/source-packages
 
     steps:
       - name: Check out repository
