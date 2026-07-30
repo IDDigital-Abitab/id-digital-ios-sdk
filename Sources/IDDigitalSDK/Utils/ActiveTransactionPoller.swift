@@ -26,7 +26,29 @@ actor ActiveTransactionPoller {
   private var pollingTask: Task<Void, Never>?
   private var lifecycleObservers: [NSObjectProtocol] = []
 
-  init() {
+  deinit {
+    let center = NotificationCenter.default
+    lifecycleObservers.forEach { center.removeObserver($0) }
+  }
+
+  func start(intervalMs: UInt64, onTransactionDetected: @escaping @Sendable (String) -> Void) {
+    installLifecycleObserversIfNeeded()
+    self.intervalMs = intervalMs
+    self.onTransactionDetected = onTransactionDetected
+    isEnabled = true
+    restartIfNeeded()
+  }
+
+  func stop() {
+    isEnabled = false
+    onTransactionDetected = nil
+    pollingTask?.cancel()
+    pollingTask = nil
+  }
+
+  private func installLifecycleObserversIfNeeded() {
+    guard lifecycleObservers.isEmpty else { return }
+
     let center = NotificationCenter.default
     let didBecomeActive = center.addObserver(
       forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
@@ -39,25 +61,6 @@ actor ActiveTransactionPoller {
       Task { await self?.handleBackground() }
     }
     lifecycleObservers = [didBecomeActive, willResignActive]
-  }
-
-  deinit {
-    let center = NotificationCenter.default
-    lifecycleObservers.forEach { center.removeObserver($0) }
-  }
-
-  func start(intervalMs: UInt64, onTransactionDetected: @escaping @Sendable (String) -> Void) {
-    self.intervalMs = intervalMs
-    self.onTransactionDetected = onTransactionDetected
-    isEnabled = true
-    restartIfNeeded()
-  }
-
-  func stop() {
-    isEnabled = false
-    onTransactionDetected = nil
-    pollingTask?.cancel()
-    pollingTask = nil
   }
 
   private func handleForeground() {
