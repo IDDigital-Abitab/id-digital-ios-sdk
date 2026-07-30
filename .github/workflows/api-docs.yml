@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Show Apple toolchain
         id: toolchain
@@ -35,7 +35,7 @@ jobs:
           echo "xcode-version=$XCODE_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Cache Swift package checkouts
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.SOURCE_PACKAGES_PATH }}
           key: ios-spm-${{ runner.os }}-xcode-${{ steps.toolchain.outputs.xcode-version }}-${{ hashFiles('Package.resolved') }}
@@ -71,10 +71,18 @@ jobs:
             "$DOCC_ARCHIVE" \
             --output-path "$DOCS_OUTPUT_PATH"
 
+      # DocC genera archivos con dos puntos en el nombre (por ejemplo `!=(_:_:).json`),
+      # que upload-artifact rechaza. Se empaqueta la documentación en un tarball.
+      - name: Package API documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -czf iddigital-ios-api-docs.tar.gz -C "$DOCS_OUTPUT_PATH" .
+
       - name: Upload API documentation
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: iddigital-ios-api-docs-${{ github.sha }}
-          path: build/docc/html
+          path: iddigital-ios-api-docs.tar.gz
           if-no-files-found: error
           retention-days: 14

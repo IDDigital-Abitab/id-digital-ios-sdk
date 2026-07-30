@@ -50,7 +50,15 @@ La referencia queda disponible en `http://localhost:8000`.
 
 GitHub Actions ejecuta la misma generación en pull requests, `main` y tags. El
 resultado se descarga desde el workflow **API documentation**, en el artefacto
-`iddigital-ios-api-docs-<commit>`.
+`iddigital-ios-api-docs-<commit>`. El artefacto contiene un único archivo
+`iddigital-ios-api-docs.tar.gz` (DocC genera nombres con caracteres que no admite
+la carga directa de artefactos); al extraerlo se obtiene el sitio estático:
+
+```shell
+mkdir -p docs-html
+tar -xzf iddigital-ios-api-docs.tar.gz -C docs-html
+python3 -m http.server 8000 --directory docs-html
+```
 
 ## App de ejemplo
 
