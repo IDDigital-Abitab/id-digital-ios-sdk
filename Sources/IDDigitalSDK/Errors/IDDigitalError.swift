@@ -1,35 +1,75 @@
 import Foundation
 
+/// Errores que puede devolver la API pública de ID Digital.
 public enum IDDigitalError: Error, LocalizedError {
     // Network Errors
+    /// El dispositivo no tiene conexión a internet.
     case noInternetConnection(cause: Error? = nil)
+
+    /// La operación superó el tiempo máximo de espera.
     case timeout(cause: Error? = nil)
+
+    /// No fue posible resolver el host configurado.
     case unknownHost(cause: Error? = nil)
     
     // Server Errors
+    /// El servicio no está disponible temporalmente.
     case serviceUnavailable(statusCode: Int, responseBody: String?, cause: Error? = nil)
+
+    /// ID Digital rechazó la solicitud por datos inválidos.
     case badResponse(statusCode: Int, responseBody: String?, cause: Error? = nil)
+
+    /// ID Digital devolvió una respuesta no contemplada.
     case unexpectedResponse(statusCode: Int, responseBody: String?, cause: Error? = nil)
 
     // SDK Usage Errors
+    /// La operación requiere invocar primero ``IDDigitalSDK/initialize(apiKey:environment:baseUrl:cognitoAppClientIdOverride:)``.
     case notInitialized
+
+    /// La credencial de integración no es válida.
     case invalidApiKey(reason: String, cause: Error? = nil)
+
+    /// El documento recibido no es válido.
     case invalidDocument(reason: String, cause: Error? = nil)
+
+    /// El Usuario agotó los intentos permitidos para el desafío.
     case tooManyAttempts
+
+    /// El dispositivo no tiene una asociación activa.
     case deviceNotAssociated
+
+    /// El identificador de desafío no es válido.
     case invalidChallengeId(reason: String, cause: Error? = nil)
+
+    /// El PIN ingresado no es válido.
     case invalidPin(reason: String, cause: Error? = nil)
+
+    /// El desafío no pudo validarse.
     case challengeValidationFailed(cause: Error? = nil)
+
+    /// La transacción OIDC no existe o dejó de estar disponible.
     case transactionNotFound
+
+    /// La sesión de validación no existe o dejó de estar disponible.
     case validationSessionNotFound
+
+    /// La sesión contiene desafíos que todavía no fueron completados.
     case sessionHasUncompletedChallenges
+
+    /// La transacción y la sesión pertenecen a identidades diferentes.
     case forbidden
 
     // Other Errors
+    /// El Usuario denegó el permiso de cámara requerido para el flujo.
     case cameraPermissionDenied(cause: Error? = nil)
+
+    /// El Usuario canceló la operación.
     case userCancelled(cause: Error? = nil)
+
+    /// Ocurrió un error que la SDK no pudo clasificar.
     case unknown(cause: Error? = nil)
 
+    /// Descripción legible del error.
     public var errorDescription: String? {
         switch self {
         // Network

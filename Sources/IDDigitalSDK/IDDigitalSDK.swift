@@ -2,14 +2,30 @@ import Foundation
 import UIKit
 import FactoryKit
 
-
+/// Punto de entrada de ID Digital para aplicaciones iOS.
+///
+/// El Integrador inicializa la instancia compartida una vez al iniciar la aplicación.
+/// Luego puede asociar dispositivos, resolver desafíos de autenticación y completar
+/// transacciones OIDC.
 public final actor IDDigitalSDK {
+  /// Instancia compartida de la SDK.
   public static let shared = IDDigitalSDK()
   
   private var isInitialized = false
   
   private init() {}
   
+  /// Inicializa la SDK y configura los servicios requeridos.
+  ///
+  /// Las invocaciones posteriores no repiten la inicialización.
+  ///
+  /// - Parameters:
+  ///   - apiKey: Credencial de integración entregada por ID Digital.
+  ///   - environment: Ambiente de ID Digital que utilizará la SDK.
+  ///   - baseUrl: URL base alternativa reservada para desarrollo y pruebas.
+  ///   - cognitoAppClientIdOverride: Identificador alternativo de Cognito reservado
+  ///     para desarrollo y pruebas.
+  /// - Throws: ``IDDigitalError`` si la configuración no puede completarse.
   public func initialize(
     apiKey: String,
     environment: IDDigitalSDKEnvironment,
@@ -39,28 +55,31 @@ public final actor IDDigitalSDK {
     }
   }
 
-  /// Extracts the `transactionId` from a same-device deep link opened by the web bridge
-  /// (`deep_link_scheme://...?transactionId=...`, see
-  /// .docs/sdk/cliente/07-deep-link-same-device.md). Returns nil if `url` isn't a deep
-  /// link of this kind, so callers can safely try this against every incoming URL their
-  /// app receives.
+  /// Extrae el `transactionId` de un deep link de autenticación recibido en el mismo
+  /// dispositivo.
+  ///
+  /// - Parameter url: URL recibida por la aplicación.
+  /// - Returns: El identificador de transacción, o `nil` si la URL no contiene
+  ///   `transactionId`.
   public static func parseAuthenticationLink(url: URL) -> String? {
     URLComponents(url: url, resolvingAgainstBaseURL: false)?
       .queryItems?.first(where: { $0.name == "transactionId" })?.value
   }
 
   
-  /// Completes device association.
+  /// Asocia el dispositivo a partir de una transacción pendiente.
   ///
-  /// - Parameter transactionId: The pending `TransactionOIDC` id, received via push
-  ///   notification (raw), a same-device deep link, or scanned from a QR (both as a signed
-  ///   token, see ``parseAuthenticationLink(url:)``). The backend resolves the citizen from
-  ///   this transaction — the app never needs to know the citizen's document.
-  /// - Returns: the `idToken` JWT issued for this association (empty string if the backend
-  ///   did not include one), and the id of the `ValidationSession` created to complete it —
-  ///   pass the latter to ``completeTransaction(transactionId:validationSessionId:)`` to close
-  ///   a pending web-bridge login triggered by this association, received via push
-  ///   notification or via a same-device deep link (see ``parseAuthenticationLink(url:)``).
+  /// La SDK presenta su interfaz de asociación y ejecuta los desafíos configurados por
+  /// ID Digital.
+  ///
+  /// - Parameters:
+  ///   - presentingViewController: Controlador desde el que se presenta el flujo.
+  ///   - transactionId: Identificador recibido por push o extraído de un deep link con
+  ///     ``parseAuthenticationLink(url:)``.
+  /// - Returns: El ID Token emitido y el identificador de la sesión de validación
+  ///   completada. El Integrador usa esa sesión con
+  ///   ``completeTransaction(transactionId:validationSessionId:)``.
+  /// - Throws: ``IDDigitalError`` si la asociación no puede completarse.
   @MainActor
   public func associate(from presentingViewController: UIViewController, transactionId: String) async throws -> (idToken: String, validationSessionId: String) {
     try await ensureInitialized()
@@ -73,20 +92,16 @@ public final actor IDDigitalSDK {
     return try await coordinator.start()
   }
   
-  /// QR cross-device registration/association (registro reducido), see
-  /// .docs/sdk/cliente/08-qr-cross-device.md. Presents the SDK's own camera
-  /// screen to scan a QR shown by the web bridge (SPA); the decoded text is
-  /// an opaque signed token that is never parsed here — it's forwarded as-is
-  /// to resolve the citizen and create the association, then again to
-  /// ``completeTransaction(transactionId:validationSessionId:)`` once the
-  /// same liveness/PIN challenge flow used by ``associate(from:transactionId:)``
-  /// finishes. No identifying data needs to be supplied upfront: the citizen
-  /// isn't known until the QR is scanned.
+  /// Asocia el dispositivo escaneando el QR mostrado en otro dispositivo.
   ///
-  /// Unlike the same-device deep link, this is always cross-device: the SDK
-  /// itself never opens the resulting `finishUrl` (the SPA on the other
-  /// device is the one polling and will redirect on its own). The return
-  /// value is only for observability/analytics.
+  /// La SDK presenta la cámara, procesa el token firmado y completa internamente la
+  /// transacción después de resolver los desafíos de asociación. No requiere datos
+  /// identificatorios antes del escaneo.
+  ///
+  /// - Parameter presentingViewController: Controlador desde el que se presenta el
+  ///   escáner y el flujo de asociación.
+  /// - Returns: La URL final informativa devuelta por el backend, o `nil`.
+  /// - Throws: ``IDDigitalError`` si el QR o la asociación no pueden procesarse.
   @MainActor
   public func associateViaQrScan(from presentingViewController: UIViewController) async throws -> String? {
     try await ensureInitialized()
@@ -98,21 +113,16 @@ public final actor IDDigitalSDK {
     return try await coordinator.start()
   }
 
-  /// QR cross-device validation for an **already associated** device, see
-  /// .docs/sdk/cliente/08-qr-cross-device.md. Symmetrical to
-  /// ``associateViaQrScan(from:)``, but for the validation challenge
-  /// flow (``createValidationSession(from:type:)``) instead of
-  /// ``associate(from:transactionId:)`` - use this when ``isAssociated()`` is
-  /// true, ``associateViaQrScan(from:)`` otherwise.
+  /// Valida una asociación existente escaneando el QR mostrado en otro dispositivo.
   ///
-  /// Presents the SDK's own camera screen to scan a QR shown by the web
-  /// bridge (SPA); the decoded text is an opaque signed token that is never
-  /// parsed here, just forwarded as-is to
-  /// ``completeTransaction(transactionId:validationSessionId:)`` once `type`
-  /// finishes.
+  /// Este método se utiliza cuando ``isAssociated()`` devuelve `true`. Para un
+  /// dispositivo todavía no asociado, se utiliza ``associateViaQrScan(from:)``.
   ///
-  /// - Parameter type: Which challenge (PIN or liveness) the citizen will
-  ///   complete after scanning, same as ``createValidationSession(from:type:)``.
+  /// - Parameters:
+  ///   - presentingViewController: Controlador desde el que se presenta el flujo.
+  ///   - type: Desafío de PIN o prueba de vida que resolverá el Usuario.
+  /// - Returns: La URL final informativa devuelta por el backend, o `nil`.
+  /// - Throws: ``IDDigitalError`` si no existe una asociación o la validación falla.
   @MainActor
   public func validateViaQrScan(from presentingViewController: UIViewController, type: ChallengeType) async throws -> String? {
     try await ensureInitialized()
@@ -129,18 +139,28 @@ public final actor IDDigitalSDK {
     return try await coordinator.start()
   }
 
+  /// Indica si el dispositivo conserva una asociación local activa.
+  ///
+  /// - Returns: `true` cuando existe una asociación almacenada.
   public func isAssociated() async -> Bool {
     let storage = Container.shared.deviceAssociationStorage()
     let association = await storage.get()
     return association != nil
   }
   
+  /// Devuelve la asociación almacenada en el dispositivo.
+  ///
+  /// - Returns: La asociación activa, o `nil` si todavía no existe.
+  /// - Throws: ``IDDigitalError/notInitialized`` si la SDK no fue inicializada.
   public func getDeviceAssociation() async throws -> DeviceAssociation? {
     try ensureInitialized()
     let storage = Container.shared.deviceAssociationStorage()
     return await storage.get()
   }
   
+  /// Elimina la asociación del backend y limpia los datos locales del dispositivo.
+  ///
+  /// Si el backend no está disponible, la SDK elimina igualmente los datos locales.
   public func removeAssociation() async {
     do {
       let useCase = Container.shared.removeAssociationUseCase()
@@ -155,10 +175,14 @@ public final actor IDDigitalSDK {
     await pinManager.savePinAndBiometricPreference(pin: "", isEnabled: false)
   }
   
-  /// - Returns: the id of the `ValidationSession` that was just completed. Pass it to
-  ///   ``completeTransaction(transactionId:validationSessionId:)`` to close a pending
-  ///   web-bridge login, received via push notification or via a same-device deep link
-  ///   (see ``parseAuthenticationLink(url:)``).
+  /// Presenta y completa un desafío de validación para un dispositivo asociado.
+  ///
+  /// - Parameters:
+  ///   - presentingViewController: Controlador desde el que se presenta el desafío.
+  ///   - type: Tipo de desafío que debe resolver el Usuario.
+  /// - Returns: El identificador de la sesión completada. Usalo con
+  ///   ``completeTransaction(transactionId:validationSessionId:)``.
+  /// - Throws: ``IDDigitalError`` si el dispositivo no está asociado o el desafío falla.
   @MainActor
   public func createValidationSession(from presentingViewController: UIViewController, type: ChallengeType) async throws -> String {
     try await ensureInitialized()
@@ -180,55 +204,43 @@ public final actor IDDigitalSDK {
     }
   }
   
-  /// Starts polling for a pending OIDC transaction as a redundant channel alongside
-  /// push (see .docs/sdk/cliente/09-polling-transaccion-activa.md) - replicates the
-  /// mechanism the default ID Digital app already uses to authenticate without
-  /// depending on push. Only covers recurring login: if the device isn't associated
-  /// yet (``isAssociated()`` false), this silently waits without erroring, since
-  /// there's no bearer token to poll with until an association exists.
+  /// Inicia el polling de transacciones OIDC pendientes como canal redundante al push.
   ///
-  /// Automatically pauses while the host app is backgrounded, and stops itself right
-  /// after the first `onTransactionDetected` call to avoid re-triggering the same
-  /// transaction on every tick while it's being resolved - call this again (e.g. once
-  /// ``completeTransaction(transactionId:validationSessionId:)`` closes that
-  /// transaction) to resume polling for a next one.
+  /// El polling se pausa cuando la aplicación queda en segundo plano y se detiene
+  /// después de informar la primera transacción. El Integrador lo invoca nuevamente
+  /// después de resolverla para detectar una transacción posterior. Si el dispositivo
+  /// no está asociado, espera silenciosamente hasta que exista una asociación.
   ///
   /// - Parameters:
-  ///   - intervalMs: Time between polls while in foreground. Defaults to 10 seconds,
-  ///     same cadence as the default app.
-  ///   - onTransactionDetected: Called with the oldest pending `transactionId` found.
-  ///     Handle it exactly like a `type: "validation"` push (see
-  ///     .docs/sdk/cliente/04-invocacion-sdk.md): ``createValidationSession(from:type:)``
-  ///     + ``completeTransaction(transactionId:validationSessionId:)``.
+  ///   - intervalMs: Intervalo entre consultas en milisegundos. El valor
+  ///     predeterminado es 10 segundos.
+  ///   - onTransactionDetected: Callback que recibe el `transactionId` pendiente más
+  ///     antiguo.
   public func startActiveTransactionPolling(
-    intervalMs: UInt64 = ActiveTransactionPoller.defaultIntervalMs,
+    intervalMs: UInt64 = 10_000,
     onTransactionDetected: @escaping @Sendable (String) -> Void
   ) async {
     let poller = Container.shared.activeTransactionPoller()
     await poller.start(intervalMs: intervalMs, onTransactionDetected: onTransactionDetected)
   }
 
-  /// Stops the polling started by ``startActiveTransactionPolling(intervalMs:onTransactionDetected:)``, if any.
+  /// Detiene el polling iniciado con
+  /// ``startActiveTransactionPolling(intervalMs:onTransactionDetected:)``.
   public func stopActiveTransactionPolling() async {
     let poller = Container.shared.activeTransactionPoller()
     await poller.stop()
   }
 
-  /// Completes a pending OIDC transaction (cross-device / same-device web bridge flow)
-  /// using an already-completed `ValidationSession`. Backend:
-  /// `POST /api/v2/sdk/complete-transaction/`.
+  /// Completa una transacción OIDC pendiente usando una sesión de validación resuelta.
   ///
   /// - Parameters:
-  ///   - transactionId: The `TransactionOIDC` id, received via push notification or via
-  ///     a same-device deep link (see ``parseAuthenticationLink(url:)``).
-  ///   - validationSessionId: The id of a `ValidationSession` that already reached
-  ///     `COMPLETED` status (e.g. via `createValidationSession`) for the same citizen.
-  /// - Returns: the `finishUrl` the backend generated for this transaction, or nil if it
-  ///   couldn't generate one (the web bridge's own polling is always the fallback in that
-  ///   case). If not nil, same-device integrations should open it (e.g.
-  ///   `UIApplication.shared.open(URL(string: finishUrl)!)`) instead of relying on the
-  ///   browser tab (that may be backgrounded) to redirect on its own — see
-  ///   .docs/sdk/cliente/07-deep-link-same-device.md.
+  ///   - transactionId: Identificador recibido por push o extraído mediante
+  ///     ``parseAuthenticationLink(url:)``.
+  ///   - validationSessionId: Identificador devuelto por ``associate(from:transactionId:)``
+  ///     o ``createValidationSession(from:type:)``.
+  /// - Returns: La URL final generada para la transacción, o `nil` si el navegador debe
+  ///   continuar mediante polling.
+  /// - Throws: ``IDDigitalError`` si la transacción no puede completarse.
   public func completeTransaction(transactionId: String, validationSessionId: String) async throws -> String? {
     try ensureInitialized()
     do {

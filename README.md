@@ -18,10 +18,42 @@ try await IDDigitalSDK.shared.initialize(
 )
 ```
 
-Documentación de integración: [`.docs/sdk/cliente/`](../../.docs/sdk/cliente/README.md).
+## Documentación
+
+La [guía de integración](../../.docs/sdk/cliente/README.md) explica los flujos de
+autenticación y cuándo invocar cada operación. La referencia de la API Swift se genera
+desde los comentarios de la superficie pública mediante DocC.
+
+La generación local requiere macOS y Xcode 16 o posterior:
+
+```shell
+xcodebuild docbuild \
+  -scheme IDDigitalSDK \
+  -destination "generic/platform=iOS" \
+  -derivedDataPath .build/docc-derived-data \
+  CODE_SIGNING_ALLOWED=NO
+
+xcrun docc process-archive transform-for-static-hosting \
+  .build/docc-derived-data/Build/Products/Debug-iphoneos/IDDigitalSDK.doccarchive \
+  --output-path .build/docc/html
+```
+
+Para consultar el resultado en un navegador:
+
+```shell
+python3 -m http.server 8000 --directory .build/docc/html
+```
+
+La referencia queda disponible en `http://localhost:8000`.
+
+GitHub Actions ejecuta la misma generación en pull requests, `main` y tags. El
+resultado se descarga desde el workflow **API documentation**, en el artefacto
+`iddigital-ios-api-docs-<commit>`.
 
 ## App de ejemplo
 
-Ver [`Example/README.md`](Example/README.md) — demuestra el Patrón B (Keycloak + push/deep link + `completeTransaction`) con paridad a [`id-digital-android-sdk/app/`](../../id-digital-android-sdk/app/).
+Ver [`Example/README.md`](Example/README.md). Demuestra el Patrón B (Keycloak +
+push/deep link + `completeTransaction`) con paridad a
+[`id-digital-android-sdk/app/`](../../id-digital-android-sdk/app/).
 
 Abrir `Example/IDDigitalSample.xcodeproj` en Xcode (requiere macOS + dispositivo físico para Liveness/push).

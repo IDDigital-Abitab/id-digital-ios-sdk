@@ -1,4 +1,4 @@
-name: iOS CI
+name: API documentation
 
 on:
   pull_request:
@@ -13,13 +13,14 @@ permissions:
   contents: read
 
 jobs:
-  build-and-test:
-    name: Build and test iOS package
+  docc:
+    name: Generate DocC HTML
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      DERIVED_DATA_PATH: ${{ runner.temp }}/IDDigitalSDKDerivedData
+      DERIVED_DATA_PATH: ${{ runner.temp }}/IDDigitalSDKDocCDerivedData
       SOURCE_PACKAGES_PATH: ${{ runner.temp }}/IDDigitalSDKSourcePackages
+      DOCS_OUTPUT_PATH: build/docc/html
 
     steps:
       - name: Check out repository
@@ -47,30 +48,32 @@ jobs:
             -scheme IDDigitalSDK \
             -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_PATH"
 
-      - name: Select available iPhone simulator
-        id: simulator
+      - name: Build DocC archive
+        run: |
+          xcodebuild docbuild \
+            -scheme IDDigitalSDK \
+            -destination "generic/platform=iOS" \
+            -derivedDataPath "$DERIVED_DATA_PATH" \
+            -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_PATH" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Transform DocC archive to static HTML
         shell: bash
         run: |
           set -euo pipefail
-          xcrun simctl list > /dev/null
-          UDID="$(
-            xcrun simctl list devices available -j |
-              jq -r '[.devices[][] | select(.name | test("^iPhone"))][0].udid // empty'
-          )"
-          if [[ -z "$UDID" ]]; then
-            xcrun simctl list devices available
+          DOCC_ARCHIVE="$DERIVED_DATA_PATH/Build/Products/Debug-iphoneos/IDDigitalSDK.doccarchive"
+          if [[ ! -d "$DOCC_ARCHIVE" ]]; then
+            echo "DocC archive not found at $DOCC_ARCHIVE"
             exit 1
           fi
-          xcrun simctl boot "$UDID" || true
-          xcrun simctl bootstatus "$UDID" -b
-          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun docc process-archive transform-for-static-hosting \
+            "$DOCC_ARCHIVE" \
+            --output-path "$DOCS_OUTPUT_PATH"
 
-      - name: Run SDK tests
-        run: |
-          xcodebuild test \
-            -scheme IDDigitalSDK \
-            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
-            -derivedDataPath "$DERIVED_DATA_PATH" \
-            -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_PATH" \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=YES
+      - name: Upload API documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: iddigital-ios-api-docs-${{ github.sha }}
+          path: build/docc/html
+          if-no-files-found: error
+          retention-days: 14

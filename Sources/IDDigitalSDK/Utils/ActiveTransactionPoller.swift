@@ -19,7 +19,7 @@ import FactoryKit
 actor ActiveTransactionPoller {
   static let defaultIntervalMs: UInt64 = 10_000
 
-  private var intervalMs: UInt64 = Self.defaultIntervalMs
+  private var intervalMs: UInt64 = ActiveTransactionPoller.defaultIntervalMs
   private var onTransactionDetected: (@Sendable (String) -> Void)?
   private var isForeground = true
   private var isEnabled = false
