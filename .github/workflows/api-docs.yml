@@ -12,6 +12,12 @@ on:
 permissions:
   contents: read
 
+# Evita cancelar un docbuild largo cuando llegan pushes seguidos (el fix del
+# tarball en main se canceló a mitad de resolve y nunca se validó).
+concurrency:
+  group: api-docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   docc:
     name: Generate DocC HTML
@@ -21,6 +27,7 @@ jobs:
       DERIVED_DATA_PATH: .build/docc-derived-data
       SOURCE_PACKAGES_PATH: .build/source-packages
       DOCS_OUTPUT_PATH: build/docc/html
+      DOCS_TARBALL: iddigital-ios-api-docs.tar.gz
 
     steps:
       - name: Check out repository
@@ -61,28 +68,38 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DOCC_ARCHIVE="$DERIVED_DATA_PATH/Build/Products/Debug-iphoneos/IDDigitalSDK.doccarchive"
-          if [[ ! -d "$DOCC_ARCHIVE" ]]; then
-            echo "DocC archive not found at $DOCC_ARCHIVE"
+          DOCC_ARCHIVE="$(find "$DERIVED_DATA_PATH" -type d -name 'IDDigitalSDK.doccarchive' | head -n 1)"
+          if [[ -z "$DOCC_ARCHIVE" || ! -d "$DOCC_ARCHIVE" ]]; then
+            echo "DocC archive not found under $DERIVED_DATA_PATH"
+            find "$DERIVED_DATA_PATH/Build/Products" -maxdepth 2 -type d 2>/dev/null || true
             exit 1
           fi
+          echo "Using DocC archive at $DOCC_ARCHIVE"
           mkdir -p "$DOCS_OUTPUT_PATH"
           xcrun docc process-archive transform-for-static-hosting \
             "$DOCC_ARCHIVE" \
             --output-path "$DOCS_OUTPUT_PATH"
+          test -f "$DOCS_OUTPUT_PATH/documentation/iddigitalsdk/index.html"
 
-      # DocC genera archivos con dos puntos en el nombre (por ejemplo `!=(_:_:).json`),
-      # que upload-artifact rechaza. Se empaqueta la documentación en un tarball.
+      # DocC genera paths con ":" (p. ej. `!=(_:_:).json` y firmas Swift), que
+      # upload-artifact rechaza. Subimos un único tarball.
       - name: Package API documentation
         shell: bash
         run: |
           set -euo pipefail
-          tar -czf iddigital-ios-api-docs.tar.gz -C "$DOCS_OUTPUT_PATH" .
+          tar -czf "$DOCS_TARBALL" -C "$DOCS_OUTPUT_PATH" .
+          test -s "$DOCS_TARBALL"
+          ls -lh "$DOCS_TARBALL"
+          # Confirmar que el artefacto a subir no tiene caracteres inválidos
+          # (el contenido interno sí puede tener ":", por eso va empaquetado).
+          case "$DOCS_TARBALL" in
+            *[:\"\<\>\|\*\?]*) echo "Invalid artifact filename: $DOCS_TARBALL"; exit 1 ;;
+          esac
 
       - name: Upload API documentation
         uses: actions/upload-artifact@v5
         with:
           name: iddigital-ios-api-docs-${{ github.sha }}
-          path: iddigital-ios-api-docs.tar.gz
+          path: ${{ env.DOCS_TARBALL }}
           if-no-files-found: error
           retention-days: 14
