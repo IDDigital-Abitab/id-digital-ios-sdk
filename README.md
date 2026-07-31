@@ -33,10 +33,12 @@ xcodebuild docbuild \
   -derivedDataPath .build/docc-derived-data \
   CODE_SIGNING_ALLOWED=NO
 
+DOCARCHIVE="$(find .build/docc-derived-data -type d -name 'IDDigitalSDK.doccarchive' | head -n 1)"
+
 mkdir -p .build/docc/html
 
 xcrun docc process-archive transform-for-static-hosting \
-  .build/docc-derived-data/Build/Products/Debug-iphoneos/IDDigitalSDK.doccarchive \
+  "$DOCARCHIVE" \
   --output-path .build/docc/html
 ```
 
@@ -46,13 +48,15 @@ Para consultar el resultado en un navegador:
 python3 -m http.server 8000 --directory .build/docc/html
 ```
 
-La referencia queda disponible en `http://localhost:8000`.
+La referencia queda en
+`http://localhost:8000/documentation/iddigitalsdk`.
 
 GitHub Actions ejecuta la misma generación en pull requests, `main` y tags. El
 resultado se descarga desde el workflow **API documentation**, en el artefacto
 `iddigital-ios-api-docs-<commit>`. El artefacto contiene un único archivo
-`iddigital-ios-api-docs.tar.gz` (DocC genera nombres con caracteres que no admite
-la carga directa de artefactos); al extraerlo se obtiene el sitio estático:
+`iddigital-ios-api-docs.tar.gz` (DocC genera nombres con `:` que
+`upload-artifact` rechaza si se sube el directorio HTML tal cual); al extraerlo
+se obtiene el sitio estático:
 
 ```shell
 mkdir -p docs-html
