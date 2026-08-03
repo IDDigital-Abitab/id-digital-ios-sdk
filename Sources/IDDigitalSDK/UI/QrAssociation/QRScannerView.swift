@@ -2,7 +2,7 @@ import SwiftUI
 import AVFoundation
 
 /// QR cross-device scan step for `IDDigitalSDK.associateViaQrScan` (see
-/// .docs/sdk/cliente/08-qr-cross-device.md). Decodes a QR code shown by the
+/// .docs/sdk/cliente/01-arquitectura-y-flujos.md). Decodes a QR code shown by the
 /// web bridge (SPA) and reports its raw text via `onScanned` - the SDK never
 /// parses/validates that value, it's an opaque signed token the backend will
 /// verify later in `completeTransaction`.

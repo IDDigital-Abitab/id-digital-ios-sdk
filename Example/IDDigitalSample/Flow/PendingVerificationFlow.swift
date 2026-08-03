@@ -110,7 +110,7 @@ struct PendingVerificationFlow: View {
         "Independiente de todo lo anterior: no requiere transactionId ni haber recibido " +
           "una push. El SPA ofrece este QR en la pantalla de espera cuando la push (de " +
           "asociación o de validación) no se pudo confirmar entregada (sdk_push_failed) " +
-          "— ver .docs/sdk/cliente/08-qr-cross-device.md. El camino se decide según el " +
+          "— ver .docs/sdk/cliente/01-arquitectura-y-flujos.md. El camino se decide según el " +
           "estado local del dispositivo, no según el tipo de transacción pendiente: si ya " +
           "está asociado, se valida; si no, se asocia. La SDK escanea el token con su " +
           "propia cámara y hace todo el resto internamente (Liveness/PIN + " +
@@ -330,7 +330,7 @@ struct PendingVerificationFlow: View {
     }
   }
 
-  /// Fallback QR cross-device (ver .docs/sdk/cliente/08-qr-cross-device.md): el SPA lo
+  /// Fallback QR cross-device (ver .docs/sdk/cliente/01-arquitectura-y-flujos.md): el SPA lo
   /// ofrece cuando la push (de asociación o de validación) no se pudo confirmar entregada
   /// (sdk_push_failed=true). associateViaQrScan() reemplaza el paso de asociar() —
   /// decodifica el transactionId desde la cámara propia de la SDK y hace internamente

@@ -22,7 +22,7 @@ struct DebugToolsView: View {
 
       // El backend resuelve el citizen desde esta transacción (via resolve_transaction_pk),
       // así que es el único dato que se necesita a mano para probar associate() de forma
-      // aislada, ver .docs/sdk/cliente/04-invocacion-sdk.md.
+      // aislada, ver .docs/sdk/cliente/04-integracion-sdk.md.
       TextField("transactionId", text: $debugTransactionId)
         .textFieldStyle(.roundedBorder)
 
@@ -149,7 +149,7 @@ struct DebugToolsView: View {
     }
   }
 
-  /// Fallback QR cross-device (ver .docs/sdk/cliente/08-qr-cross-device.md), probado de
+  /// Fallback QR cross-device (ver .docs/sdk/cliente/01-arquitectura-y-flujos.md), probado de
   /// forma aislada: associateViaQrScan() reemplaza el paso de associate() (decodifica el
   /// transactionId con la cámara propia de la SDK, sin necesitar ningún dato de
   /// identificación por adelantado) y hace internamente Liveness/PIN +
@@ -166,7 +166,7 @@ struct DebugToolsView: View {
     }
   }
 
-  /// Camino de validación del mismo fallback QR (ver .docs/sdk/cliente/08-qr-cross-device.md),
+  /// Camino de validación del mismo fallback QR (ver .docs/sdk/cliente/01-arquitectura-y-flujos.md),
   /// probado de forma aislada: validateViaQrScan() reemplaza el paso de
   /// createValidationSession() para un dispositivo ya asociado - no requiere Document, la
   /// asociación local ya identifica al citizen.

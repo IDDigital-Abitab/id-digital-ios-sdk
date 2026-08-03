@@ -1,8 +1,22 @@
 import Foundation
+import IDDigitalSDK
 
 enum AppConfiguration {
   static var apiKey: String {
     string(for: "API_KEY")
+  }
+
+  static var sdkEnvironment: IDDigitalSDKEnvironment? {
+    let value = string(for: "SDK_ENVIRONMENT", default: "STAGING")
+      .uppercased()
+    switch value.isEmpty ? "STAGING" : value {
+    case "STAGING":
+      return .staging
+    case "PRODUCTION":
+      return .production
+    default:
+      return nil
+    }
   }
 
   static var apiBaseURL: String? {

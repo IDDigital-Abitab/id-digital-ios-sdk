@@ -17,12 +17,14 @@ public final actor IDDigitalSDK {
   
   /// Inicializa la SDK y configura los servicios requeridos.
   ///
-  /// Las invocaciones posteriores no repiten la inicialización.
+  /// Debe invocarse una sola vez al iniciar la aplicación. Las invocaciones posteriores
+  /// conservan el ambiente y la API key de la primera inicialización.
   ///
   /// - Parameters:
   ///   - apiKey: Credencial de integración entregada por ID Digital.
   ///   - environment: Ambiente de ID Digital que utilizará la SDK.
-  ///   - baseUrl: URL base alternativa reservada para desarrollo y pruebas.
+  ///   - baseUrl: URL base alternativa reservada para desarrollo interno y pruebas.
+  ///     En una integración normal debe permanecer en `nil`.
   ///   - cognitoAppClientIdOverride: Identificador alternativo de Cognito reservado
   ///     para desarrollo y pruebas.
   /// - Throws: ``IDDigitalError`` si la configuración no puede completarse.

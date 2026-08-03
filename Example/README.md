@@ -15,6 +15,7 @@ Tiene Firebase Cloud Messaging configurado (mismo proyecto Firebase del mock BQM
 1. **Secrets:** copiar [`IDDigitalSample/Config/Secrets.xcconfig.example`](IDDigitalSample/Config/Secrets.xcconfig.example) como `Example/Secrets.xcconfig` (gitignored) y completar:
 
 ```xcconfig
+SDK_ENVIRONMENT=STAGING
 API_KEY=<api key del sdk.Client de prueba, entregado por ID Digital>
 API_BASE_URL=<opcional, ver abajo>
 KEYCLOAK_BASE_URL=https://bqm-keycloak-dev.alabamasolutions.com
@@ -33,7 +34,10 @@ KEYCLOAK_REDIRECT_URI=iddigitalsample://auth
    - `iddigitalsample://auth` — retorno Keycloak
    - `iddigitalsample://sdkauth?transactionId=...` — same-device web bridge
 
-- `API_BASE_URL` es opcional: sin ella, la SDK usa `IDDigitalSDKEnvironment.staging` (`auth.identificaciondigital.com.uy`). Para apuntar a un backend propio (docker-compose, droplet DigitalOcean — ver [`.docs/sdk/entorno-desarrollo-digitalocean.md`](../../.docs/sdk/entorno-desarrollo-digitalocean.md)), completarla con `http://<host>/api/v2/sdk`. Debe ser el **mismo** backend contra el que corre el login Keycloak/mock BQM. Para HTTP plano, [`Info.plist`](IDDigitalSample/Info.plist) ya incluye excepciones ATS para hosts de dev conocidos.
+- `SDK_ENVIRONMENT` acepta `STAGING` (default si se omite) o `PRODUCTION`. Debe corresponder al ambiente de `API_KEY` y del Keycloak configurado; la app muestra un error antes de inicializar la SDK si el valor no es válido.
+- `API_BASE_URL` es un override opcional reservado para desarrollo interno. Sin ella, la SDK resuelve la URL oficial desde `SDK_ENVIRONMENT`. Para apuntar a un backend propio (docker-compose, droplet DigitalOcean — ver [`.docs/sdk/entorno-desarrollo-digitalocean.md`](../../.docs/sdk/entorno-desarrollo-digitalocean.md)), completarla con `http://<host>/api/v2/sdk`. Debe ser el **mismo** backend contra el que corre el login Keycloak/mock BQM. Para HTTP plano, [`Info.plist`](IDDigitalSample/Info.plist) ya incluye excepciones ATS para hosts de dev conocidos.
+
+Al cambiar manualmente de `STAGING` a `PRODUCTION` con el mismo bundle ID, borrar la app del dispositivo antes de probar. Esto evita reutilizar una asociación local guardada en Keychain contra el ambiente anterior.
 
 ## Cómo abrir y correr
 
@@ -57,7 +61,7 @@ Para probar **same-device** (sin push automática): login desde Safari mobile en
 
 ## Cómo probar el fallback QR cross-device
 
-Ver [`08-qr-cross-device.md`](../../.docs/sdk/cliente/08-qr-cross-device.md) para el flujo completo. El SPA ofrece el QR cuando la push (de asociación **o** de validación) no se pudo confirmar entregada (`sdk_push_failed=true`, ver [`sdk/tasks.py`](../../id-2.0-backend/backend/sdk/tasks.py)), así que para forzarlo en dev sin depender de una falla real de FCM/APNs:
+Ver [`01-arquitectura-y-flujos.md`](../../.docs/sdk/cliente/01-arquitectura-y-flujos.md) para el flujo completo. El SPA ofrece el QR cuando la push (de asociación **o** de validación) no se pudo confirmar entregada (`sdk_push_failed=true`, ver [`sdk/tasks.py`](../../id-2.0-backend/backend/sdk/tasks.py)), así que para forzarlo en dev sin depender de una falla real de FCM/APNs:
 
 1. En Django Admin → SDK → Clients, apuntar temporalmente `push_endpoint_url` del `sdk.Client` de prueba a una URL que devuelva `404` (o dejarlo vacío/inválido para que se agoten los reintentos) — cualquiera de los dos casos deja la transacción `IN_PROGRESS` con `sdk_push_failed=true` en vez de fallarla.
 2. **Iniciar sesión con Keycloak** desde un navegador (puede ser en la laptop, para probar el caso cross-device real). El backend crea la transacción pendiente y, al no poder confirmar la push, la pantalla de espera muestra el QR en el siguiente polling.

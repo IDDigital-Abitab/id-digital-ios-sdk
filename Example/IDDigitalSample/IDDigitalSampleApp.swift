@@ -26,11 +26,15 @@ struct IDDigitalSampleApp: App {
       appState.sdkInitError = "Falta API_KEY en Secrets.xcconfig"
       return
     }
+    guard let environment = AppConfiguration.sdkEnvironment else {
+      appState.sdkInitError = "SDK_ENVIRONMENT debe ser STAGING o PRODUCTION"
+      return
+    }
 
     do {
       try await IDDigitalSDK.shared.initialize(
         apiKey: apiKey,
-        environment: .staging,
+        environment: environment,
         baseUrl: AppConfiguration.apiBaseURL
       )
       appState.sdkInitialized = true

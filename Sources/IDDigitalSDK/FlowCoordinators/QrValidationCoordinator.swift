@@ -5,7 +5,7 @@ import LocalAuthentication
 
 /// QR cross-device variant of `ValidationCoordinator`: identical challenge
 /// flow (pin/liveness for a single `ChallengeType`), duplicated on purpose
-/// rather than sharing code with it (see .docs/sdk/cliente/08-qr-cross-device.md).
+/// rather than sharing code with it (see .docs/sdk/cliente/01-arquitectura-y-flujos.md).
 ///
 /// The only differences are: it starts with a QR scan step to obtain the
 /// `transactionId` (an opaque signed token, never parsed/validated here),

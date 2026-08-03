@@ -26,11 +26,11 @@ pendiente sin depender de la notificación, replicando el mecanismo que ya usa l
 default de ID Digital. Solo cubre login recurrente (`validation`) — sin asociación
 local no hay bearer token contra el cual preguntar, así que mientras no exista el
 polling queda en espera silenciosa (no es un error). Ver
-[`.docs/sdk/cliente/09-polling-transaccion-activa.md`](../.docs/sdk/cliente/09-polling-transaccion-activa.md).
+[`.docs/sdk/cliente/05-polling-transaccion-activa.md`](../.docs/sdk/cliente/05-polling-transaccion-activa.md).
 
 ```swift
 await IDDigitalSDK.shared.startActiveTransactionPolling { transactionId in
-    // Mismo manejo que type: "validation" por push (ver 04-invocacion-sdk.md)
+    // Mismo manejo que type: "validation" por push (ver 04-integracion-sdk.md)
 }
 
 await IDDigitalSDK.shared.stopActiveTransactionPolling()
@@ -82,7 +82,7 @@ viva ya garantiza que el citizen existe) y se elimina.
 
 1. Dejar de construir `Document` para `associate(from:)`/`associateViaQrScan(from:)`: pasar
    el `transactionId` que la app ya recibe por push (en crudo), deep link same-device o QR
-   (token firmado) — ver [`04-invocacion-sdk.md`](../.docs/sdk/cliente/04-invocacion-sdk.md).
+   (token firmado) — ver [`04-integracion-sdk.md`](../.docs/sdk/cliente/04-integracion-sdk.md).
 2. Eliminar cualquier llamada a `canAssociate(document:)`.
 3. El endpoint de push hacia el Integrador (`03-endpoint-push.md`) no cambia — sigue
    enviando `documentNumber`/`documentType`/`documentCountry` porque el Integrador los
@@ -115,7 +115,7 @@ documento, así que cualquier persona con pasaporte (`psp`) o documento no-UY
 (`AR`/`BR`/`CL`/`PY`) fallaba silenciosamente al asociar dispositivo (`can_associate`/
 `createDeviceAssociation` no encontraban al citizen real). Ver
 [`.docs/sdk/cliente/03-endpoint-push.md`](../.docs/sdk/cliente/03-endpoint-push.md) y
-[`04-invocacion-sdk.md`](../.docs/sdk/cliente/04-invocacion-sdk.md).
+[`04-integracion-sdk.md`](../.docs/sdk/cliente/04-integracion-sdk.md).
 
 **Migración para Integradores:**
 
@@ -123,7 +123,7 @@ documento, así que cualquier persona con pasaporte (`psp`) o documento no-UY
    en el push de asociación (`type="association"`, ver `03-endpoint-push.md`) hacia la
    app.
 2. Si se usa el deep link same-device, leer los nuevos query params `documentType`/
-   `documentCountry` (ver [`06-deep-link-same-device.md`](../.docs/sdk/cliente/06-deep-link-same-device.md)) -
+   `documentCountry` (ver [`01-arquitectura-y-flujos.md`](../.docs/sdk/cliente/01-arquitectura-y-flujos.md)) -
    no requiere ningún método nuevo de la SDK, son query params planos de la URL.
 3. Actualizar toda construcción de `Document(...)` para pasar `type`/`country` reales -
    ya no hay valor por defecto.
@@ -137,7 +137,7 @@ Registro reducido cuando no hay asociación (el Integrador no reconoce al citize
 Usuario elige registrarse directamente): la SDK presenta su propia pantalla de cámara
 (`AVFoundation`, sin dependencia nueva), decodifica un QR mostrado por el navegador y
 completa la asociación + login sin salir de la app. Ver
-[`.docs/sdk/cliente/08-qr-cross-device.md`](../.docs/sdk/cliente/08-qr-cross-device.md).
+[`.docs/sdk/cliente/01-arquitectura-y-flujos.md`](../.docs/sdk/cliente/01-arquitectura-y-flujos.md).
 
 ```swift
 let finishUrl = try await IDDigitalSDK.shared.associateViaQrScan(
@@ -149,7 +149,7 @@ let finishUrl = try await IDDigitalSDK.shared.associateViaQrScan(
 
 **Requiere que la app del Integrador declare `NSCameraUsageDescription` en su
 `Info.plist`** (ya necesario hoy para Liveness) — ver
-[`07-configuracion-manifest.md`](../.docs/sdk/cliente/07-configuracion-manifest.md).
+[`04-integracion-sdk.md`](../.docs/sdk/cliente/04-integracion-sdk.md).
 
 ### ✨ Nueva funcionalidad: `validateViaQrScan(from:type:)`
 
@@ -158,7 +158,7 @@ asociado**: reemplaza el primer paso de `createValidationSession(from:type:)` en
 `associate(from:document:)`. No requiere `Document` — la asociación local ya identifica al
 citizen. Si `isAssociated()` es `false`, falla con `.deviceNotAssociated` antes de abrir la
 cámara. Ver
-[`.docs/sdk/cliente/08-qr-cross-device.md`](../.docs/sdk/cliente/08-qr-cross-device.md).
+[`.docs/sdk/cliente/01-arquitectura-y-flujos.md`](../.docs/sdk/cliente/01-arquitectura-y-flujos.md).
 
 ```swift
 let finishUrl = try await IDDigitalSDK.shared.validateViaQrScan(

@@ -80,7 +80,7 @@ final class ValidationSessionService {
   /// Lists pending OIDC transactions for the citizen behind the current
   /// DeviceAssociation (bearer token added by `NetworkClient.makeRequestRaw`).
   /// Used by `IDDigitalSDK.startActiveTransactionPolling` -
-  /// .docs/sdk/cliente/09-polling-transaccion-activa.md.
+  /// .docs/sdk/cliente/05-polling-transaccion-activa.md.
   func getPendingTransactions() async throws -> [PendingTransaction] {
     let response: PendingTransactionsResponse = try await networkClient.get(path: "transactions/pending/")
     return response.transactions

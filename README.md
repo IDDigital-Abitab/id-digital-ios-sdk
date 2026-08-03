@@ -13,14 +13,17 @@ Requisito: iOS 15+.
 ```swift
 try await IDDigitalSDK.shared.initialize(
   apiKey: "<api key del Integrador>",
-  environment: .staging,  // o .production
-  baseUrl: nil             // opcional: override para backend de desarrollo, ej. "http://host/api/v2/sdk"
+  environment: .staging  // o .production
 )
 ```
 
+La app debe proporcionar el ambiente y la API key correspondiente desde la
+configuración de su build. La misma versión de la SDK se utiliza en staging y
+producción.
+
 ## Documentación
 
-La [guía de integración](../../.docs/sdk/cliente/README.md) explica los flujos de
+La [guía de integración](../.docs/sdk/cliente/README.md) explica los flujos de
 autenticación y cuándo invocar cada operación. La referencia de la API Swift se genera
 desde los comentarios de la superficie pública mediante DocC.
 
@@ -68,6 +71,6 @@ python3 -m http.server 8000 --directory docs-html
 
 Ver [`Example/README.md`](Example/README.md). Demuestra el Patrón B (Keycloak +
 push/deep link + `completeTransaction`) con paridad a
-[`id-digital-android-sdk/app/`](../../id-digital-android-sdk/app/).
+[`id-digital-android-sdk/app/`](../id-digital-android-sdk/app/).
 
 Abrir `Example/IDDigitalSample.xcodeproj` en Xcode (requiere macOS + dispositivo físico para Liveness/push).
