@@ -1,4 +1,4 @@
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 final class RemoveAssociationUseCase {
   @Injected(\.validationSessionRepository) private var repository

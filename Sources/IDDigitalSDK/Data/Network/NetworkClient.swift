@@ -1,5 +1,5 @@
 import Foundation
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 struct EmptyBody: Codable {}
 

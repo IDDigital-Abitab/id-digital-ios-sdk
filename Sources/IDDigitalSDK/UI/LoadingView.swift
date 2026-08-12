@@ -1,5 +1,5 @@
 import SwiftUI
-import Lottie
+@_implementationOnly import Lottie
 
 struct LoadingView: View {
   @Environment(\.colorScheme) var colorScheme

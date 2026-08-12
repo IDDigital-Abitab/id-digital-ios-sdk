@@ -1,4 +1,4 @@
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 final class ValidatePinChallengeUseCase {
   @Injected(\.pinRepository) private var repository

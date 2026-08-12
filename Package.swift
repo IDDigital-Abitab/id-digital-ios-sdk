@@ -12,6 +12,7 @@ let package = Package(
   products: [
     .library(
       name: "IDDigitalSDK",
+      type: .dynamic,
       targets: ["IDDigitalSDK"]),
   ],
   dependencies: [
@@ -32,6 +33,13 @@ let package = Package(
       ],
       resources: [
         .process("Resources"),
+      ],
+      swiftSettings: [
+        .unsafeFlags([
+            "-enable-library-evolution", 
+            "-emit-module-interface",
+            "-Xfrontend", "-module-interface-preserve-types-as-written"
+        ])
       ]
     ),
     .testTarget(

@@ -1,5 +1,5 @@
 import Foundation
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 final class LivenessService {
   @Injected(\.networkClient) private var networkClient

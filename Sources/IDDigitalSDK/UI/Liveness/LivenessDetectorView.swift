@@ -1,5 +1,5 @@
 import SwiftUI
-import FaceLiveness
+@_implementationOnly import FaceLiveness
 
 struct LivenessDetectorView: View {
   let sessionId: String

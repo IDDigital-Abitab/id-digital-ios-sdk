@@ -32,7 +32,7 @@ struct IDDigitalSampleApp: App {
     }
 
     do {
-      try await IDDigitalSDK.shared.initialize(
+      try await IDDigitalClient.shared.initialize(
         apiKey: apiKey,
         environment: environment,
         baseUrl: AppConfiguration.apiBaseURL

@@ -1,5 +1,5 @@
 import Foundation
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 protocol LivenessRepository {
   func executeChallenge(challengeId: String) async throws -> String

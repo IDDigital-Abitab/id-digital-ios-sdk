@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 
 final class ConfigService {

@@ -136,7 +136,7 @@ struct DebugToolsView: View {
   private func associateDevice() async {
     guard let viewController = await presentingViewController() else { return }
     do {
-      let result = try await IDDigitalSDK.shared.associate(
+      let result = try await IDDigitalClient.shared.associate(
         from: viewController,
         transactionId: debugTransactionId
       )
@@ -157,7 +157,7 @@ struct DebugToolsView: View {
   private func associateViaQrScan() async {
     guard let viewController = await presentingViewController() else { return }
     do {
-      let finishUrl = try await IDDigitalSDK.shared.associateViaQrScan(from: viewController)
+      let finishUrl = try await IDDigitalClient.shared.associateViaQrScan(from: viewController)
       await MainActor.run {
         appState.showStatus("Transacción completada vía QR. finishUrl=\(finishUrl ?? "nil")")
       }
@@ -173,7 +173,7 @@ struct DebugToolsView: View {
   private func validateViaQrScan(type: ChallengeType) async {
     guard let viewController = await presentingViewController() else { return }
     do {
-      let finishUrl = try await IDDigitalSDK.shared.validateViaQrScan(from: viewController, type: type)
+      let finishUrl = try await IDDigitalClient.shared.validateViaQrScan(from: viewController, type: type)
       await MainActor.run {
         appState.showStatus("Transacción completada vía QR. finishUrl=\(finishUrl ?? "nil")")
       }
@@ -183,21 +183,21 @@ struct DebugToolsView: View {
   }
 
   private func checkAssociation() async {
-    let associated = await IDDigitalSDK.shared.isAssociated()
+    let associated = await IDDigitalClient.shared.isAssociated()
     await MainActor.run {
       appState.showStatus(associated ? "Usuario ya se encuentra asociado" : "No existe usuario asociado")
     }
   }
 
   private func removeAssociation() async {
-    await IDDigitalSDK.shared.removeAssociation()
+    await IDDigitalClient.shared.removeAssociation()
     await MainActor.run { appState.showStatus("Asociación eliminada") }
   }
 
   private func createValidationSession(type: ChallengeType) async {
     guard let viewController = await presentingViewController() else { return }
     do {
-      let validationSessionId = try await IDDigitalSDK.shared.createValidationSession(
+      let validationSessionId = try await IDDigitalClient.shared.createValidationSession(
         from: viewController,
         type: type
       )
@@ -211,7 +211,7 @@ struct DebugToolsView: View {
 
   private func completeTransactionManual() async {
     do {
-      let finishUrl = try await IDDigitalSDK.shared.completeTransaction(
+      let finishUrl = try await IDDigitalClient.shared.completeTransaction(
         transactionId: manualTransactionID,
         validationSessionId: manualValidationSessionID
       )

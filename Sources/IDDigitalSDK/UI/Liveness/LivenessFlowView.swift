@@ -1,5 +1,5 @@
 import SwiftUI
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 struct LivenessFlowView: View {
   let challengeId: String

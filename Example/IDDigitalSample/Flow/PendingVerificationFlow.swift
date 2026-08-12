@@ -268,13 +268,13 @@ struct PendingVerificationFlow: View {
 
   @MainActor
   private func refreshDeviceAssociation() async {
-    isDeviceAssociated = await IDDigitalSDK.shared.isAssociated()
+    isDeviceAssociated = await IDDigitalClient.shared.isAssociated()
   }
 
   private func completeTransaction(validationSessionId: String, openFinishUrl: Bool) async {
     await MainActor.run { completeStepState = .running }
     do {
-      let finishUrl = try await IDDigitalSDK.shared.completeTransaction(
+      let finishUrl = try await IDDigitalClient.shared.completeTransaction(
         transactionId: transactionId,
         validationSessionId: validationSessionId
       )
@@ -307,7 +307,7 @@ struct PendingVerificationFlow: View {
     do {
       switch pendingType {
       case .association:
-        let result = try await IDDigitalSDK.shared.associate(
+        let result = try await IDDigitalClient.shared.associate(
           from: viewController,
           transactionId: transactionId
         )
@@ -315,7 +315,7 @@ struct PendingVerificationFlow: View {
         await refreshDeviceAssociation()
         await completeTransaction(validationSessionId: result.validationSessionId, openFinishUrl: openFinishUrl)
       case .validation:
-        let validationSessionId = try await IDDigitalSDK.shared.createValidationSession(
+        let validationSessionId = try await IDDigitalClient.shared.createValidationSession(
           from: viewController,
           type: challengeType
         )
@@ -348,7 +348,7 @@ struct PendingVerificationFlow: View {
     }
 
     do {
-      let finishUrl = try await IDDigitalSDK.shared.associateViaQrScan(from: viewController)
+      let finishUrl = try await IDDigitalClient.shared.associateViaQrScan(from: viewController)
       await MainActor.run {
         qrStepState = .done
         appState.showStatus("Transacción completada vía QR")
@@ -375,7 +375,7 @@ struct PendingVerificationFlow: View {
     }
 
     do {
-      let finishUrl = try await IDDigitalSDK.shared.validateViaQrScan(from: viewController, type: qrChallengeType)
+      let finishUrl = try await IDDigitalClient.shared.validateViaQrScan(from: viewController, type: qrChallengeType)
       await MainActor.run {
         qrStepState = .done
         appState.showStatus("Transacción completada vía QR")

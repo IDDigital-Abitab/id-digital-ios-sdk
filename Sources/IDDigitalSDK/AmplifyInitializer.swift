@@ -1,7 +1,7 @@
 import Foundation
-import Amplify
-import AWSCognitoAuthPlugin
-import FactoryKit
+@_implementationOnly import Amplify
+@_implementationOnly import AWSCognitoAuthPlugin
+@_implementationOnly import FactoryKit
 
 final class AmplifyInitializer {
   static func initialize() async throws {

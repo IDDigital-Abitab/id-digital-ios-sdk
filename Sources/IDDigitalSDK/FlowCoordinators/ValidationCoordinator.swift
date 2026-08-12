@@ -1,5 +1,5 @@
 import UIKit
-import FactoryKit
+@_implementationOnly import FactoryKit
 import SwiftUI
 import LocalAuthentication
 

@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 private struct LifecycleObserverToken: @unchecked Sendable {
   let value: NSObjectProtocol

@@ -1,5 +1,5 @@
 import UIKit
-import FactoryKit
+@_implementationOnly import FactoryKit
 import SwiftUI
 import LocalAuthentication
 
@@ -41,7 +41,7 @@ final class QrAssociationCoordinator {
     let completeAssociationUseCase = Container.shared.completeDeviceAssociationUseCase()
     let newDeviceAssociation = try await completeAssociationUseCase.execute(id: validationSession.id)
 
-    try await IDDigitalSDK.shared.removeAssociation()
+    try await IDDigitalClient.shared.removeAssociation()
 
     let storage = Container.shared.deviceAssociationStorage()
     await storage.save(association: newDeviceAssociation)
