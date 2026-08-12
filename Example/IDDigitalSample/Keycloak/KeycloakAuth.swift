@@ -53,10 +53,14 @@ enum KeycloakAuth {
     }
 
     return try await withCheckedThrowingContinuation { continuation in
+      let provider = PresentationContextProvider(anchor: presentationAnchor)
       let session = ASWebAuthenticationSession(
         url: authorizeURL,
         callbackURLScheme: "iddigitalsample"
       ) { callbackURL, error in
+        // Retenemos el provider para que no se desasigne por ARC antes de tiempo
+        _ = provider
+        
         if let error {
           continuation.resume(throwing: error)
           return
@@ -71,9 +75,16 @@ enum KeycloakAuth {
           continuation.resume(throwing: KeycloakAuthError.unrecognizedCallbackURL)
         }
       }
-      session.presentationContextProvider = PresentationContextProvider(anchor: presentationAnchor)
+      
+      session.presentationContextProvider = provider
       session.prefersEphemeralWebBrowserSession = false
+      
       if !session.start() {
+        // En caso de que start() falle y NO haya llamado al completion handler, 
+        // fallamos nosotros. ASWebAuthenticationSession normalmente no llama al callback si start() da false sincrónicamente.
+        // Pero para evitar doble resume (como pasaba antes si se deallocaba el provider), 
+        // tener el _ = provider en el closure evita que falle de esa manera.
+        // Hacemos el resume manual en caso que el start() falle.
         continuation.resume(throwing: KeycloakAuthError.failedToStartSession)
       }
     }
