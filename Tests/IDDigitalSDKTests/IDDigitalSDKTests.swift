@@ -34,7 +34,7 @@ final class IDDigitalSDKTests: XCTestCase {
 // This function is intentionally not executed. Compiling the test target verifies that the
 // supported integration surface remains accessible to an external Swift module.
 private func compilePublicContract(
-  sdk: IDDigitalSDK,
+  sdk: IDDigitalClient,
   viewController: UIViewController,
   environment: IDDigitalSDKEnvironment,
   challengeType: ChallengeType,
