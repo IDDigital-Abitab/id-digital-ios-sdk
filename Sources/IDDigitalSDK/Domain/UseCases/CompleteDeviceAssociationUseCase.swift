@@ -1,4 +1,4 @@
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 final class CompleteDeviceAssociationUseCase {
   @Injected(\.validationSessionRepository) private var repository

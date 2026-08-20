@@ -1,4 +1,4 @@
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 protocol ValidationSessionRepository {
   func createDeviceAssociation(transactionId: String) async throws -> ValidationSession

@@ -11,7 +11,8 @@ Requisito: iOS 15+.
 ## Inicialización
 
 ```swift
-try await IDDigitalSDK.shared.initialize(
+try await IDDigitalClient.shared.initialize(
+  context: self, // o la referencia actual de la UI
   apiKey: "<api key del Integrador>",
   environment: .staging  // o .production
 )

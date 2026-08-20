@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 extension Container {
   // --- Parameters ---

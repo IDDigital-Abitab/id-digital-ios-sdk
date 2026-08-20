@@ -1,6 +1,6 @@
 import SwiftUI
 import LocalAuthentication
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 struct PinEntryView: View {
   private let pinLength = 4

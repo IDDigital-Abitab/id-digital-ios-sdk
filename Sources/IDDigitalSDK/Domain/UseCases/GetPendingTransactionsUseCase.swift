@@ -1,4 +1,4 @@
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 final class GetPendingTransactionsUseCase {
   @Injected(\.validationSessionRepository) private var repository

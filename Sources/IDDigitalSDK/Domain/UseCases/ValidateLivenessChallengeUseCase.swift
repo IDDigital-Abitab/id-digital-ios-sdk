@@ -1,4 +1,4 @@
-import FactoryKit
+@_implementationOnly import FactoryKit
 import Foundation
 
 final class ValidateLivenessChallengeUseCase {

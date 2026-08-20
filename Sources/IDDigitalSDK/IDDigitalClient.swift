@@ -1,15 +1,15 @@
 import Foundation
 import UIKit
-import FactoryKit
+@_implementationOnly import FactoryKit
 
 /// Punto de entrada de ID Digital para aplicaciones iOS.
 ///
 /// El Integrador inicializa la instancia compartida una vez al iniciar la aplicación.
 /// Luego puede asociar dispositivos, resolver desafíos de autenticación y completar
 /// transacciones OIDC.
-public final actor IDDigitalSDK {
+public final actor IDDigitalClient {
   /// Instancia compartida de la SDK.
-  public static let shared = IDDigitalSDK()
+  public static let shared = IDDigitalClient()
   
   private var isInitialized = false
   
