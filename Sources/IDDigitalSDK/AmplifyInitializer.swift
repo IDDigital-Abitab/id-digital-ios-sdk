@@ -9,35 +9,35 @@ final class AmplifyInitializer {
     let configData = try await configService.getConfiguration()
     let override = Container.shared.cognitoAppClientIdOverride()
     let appClientId: String? = (configData.cognitoAppClientId.flatMap { $0.isEmpty ? nil : $0 }) ?? (override.flatMap { $0.isEmpty ? nil : $0 })
-    guard let appClientId = appClientId, !appClientId.isEmpty else {
-      print("[IDDigitalSDK] cognitoAppClientId null o vacío en initialize/ (y sin override) — Amplify no se configurará. Liveness puede fallar en dispositivo.")
-      return
-    }
 
-    let authConfiguration = AuthCategoryConfiguration(
-        plugins: [
-          "awsCognitoAuthPlugin": .object([
-            "UserAgent": .string("aws-amplify/swift"),
-            "Version": .string("1.0.0"),
-            "IdentityManager": .object([
-              "Default": .object([:])
-            ]),
-            "CredentialsProvider": .object([
-              "CognitoIdentity": .object([
-                "Default": .object([
-                  "PoolId": .string(configData.cognitoIdentityPoolId),
-                  "Region": .string(configData.region)
-                ])
-              ])
-            ]),
-            "CognitoUserPool": .object([
-              "Default": .object([
-                "PoolId": .string(configData.cognitoUserPoolId),
-                "AppClientId": .string(appClientId),
-                "Region": .string(configData.region)
-              ])
-            ]),
-            "Auth": .object([
+    // Amplify construye el user pool aunque el AppClientId llegue vacío y después lo
+    // desreferencia. Liveness solo usa las credenciales de invitado del identity pool,
+    // así que el user pool se omite cuando el backend no envía AppClientId.
+    var cognitoPlugin: [String: JSONValue] = [
+      "UserAgent": .string("aws-amplify/swift"),
+      "Version": .string("1.0.0"),
+      "IdentityManager": .object([
+        "Default": .object([:])
+      ]),
+      "CredentialsProvider": .object([
+        "CognitoIdentity": .object([
+          "Default": .object([
+            "PoolId": .string(configData.cognitoIdentityPoolId),
+            "Region": .string(configData.region)
+          ])
+        ])
+      ])
+    ]
+    if let appClientId, !appClientId.isEmpty {
+      cognitoPlugin["CognitoUserPool"] = .object([
+        "Default": .object([
+          "PoolId": .string(configData.cognitoUserPoolId),
+          "AppClientId": .string(appClientId),
+          "Region": .string(configData.region)
+        ])
+      ])
+    }
+    cognitoPlugin["Auth"] = .object([
               "Default": .object([
                 "authenticationFlowType": .string("USER_SRP_AUTH"),
                 "socialProviders": .array([]),
@@ -52,7 +52,10 @@ final class AmplifyInitializer {
                 "verificationMechanisms": .array([.string("PHONE_NUMBER")])
               ])
             ])
-          ])
+
+    let authConfiguration = AuthCategoryConfiguration(
+        plugins: [
+          "awsCognitoAuthPlugin": .object(cognitoPlugin)
         ]
     )
     let amplifyConfiguration = AmplifyConfiguration(auth: authConfiguration)
