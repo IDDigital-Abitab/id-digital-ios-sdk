@@ -14,9 +14,10 @@ struct ContentView: View {
           } else {
             PendingVerificationFlow()
 
-            Divider()
-
-            DebugToolsView()
+            Text(appIdentity)
+              .font(.footnote)
+              .foregroundStyle(.secondary)
+              .frame(maxWidth: .infinity, alignment: .center)
           }
         }
         .padding(24)
@@ -34,5 +35,12 @@ struct ContentView: View {
         Text(appState.statusMessage ?? "")
       }
     }
+  }
+
+  private var appIdentity: String {
+    let bundleId = Bundle.main.bundleIdentifier ?? "-"
+    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+    let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
+    return "\(bundleId) · v\(version) (\(build))"
   }
 }

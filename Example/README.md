@@ -2,7 +2,7 @@
 
 Esta app demuestra el Patrón B (puente web) descrito en [`.docs/sdk/cliente/`](../../.docs/sdk/cliente/README.md) y en [`.docs/sdk/primera-asociacion-app-integradora.md`](../../.docs/sdk/primera-asociacion-app-integradora.md) §2.2: login Keycloak → aviso de verificación pendiente → la SDK resuelve asociación o validación → `completeTransaction()` cierra el login.
 
-Tiene Firebase Cloud Messaging configurado (mismo proyecto Firebase del mock BQM que usa la app de ejemplo Android — simula la infraestructura FCM propia de un Integrador). El aviso que en producción llegaría por push (`transactionId`, `type`, `documentNumber`, ver [`03-endpoint-push.md`](../../.docs/sdk/cliente/03-endpoint-push.md)) llega como push data-only y la app muestra una notificación local; al tocarla resuelve sola la asociación/validación y completa la transacción — ver [`Push/PushNotificationHandler.swift`](IDDigitalSample/Push/PushNotificationHandler.swift). También se puede completar a mano en "Resolver verificación pendiente" para probar sin depender de FCM.
+Tiene Firebase Cloud Messaging configurado (mismo proyecto Firebase del mock BQM que usa la app de ejemplo Android — simula la infraestructura FCM propia de un Integrador). El aviso que en producción llegaría por push (`transactionId`, `type`, `documentNumber`, ver [`03-endpoint-push.md`](../../.docs/sdk/cliente/03-endpoint-push.md)) llega como push data-only y la app muestra una notificación local; al tocarla resuelve sola la asociación/validación y completa la transacción — ver [`Push/PushNotificationHandler.swift`](IDDigitalSample/Push/PushNotificationHandler.swift).
 
 ## Requisitos
 
@@ -52,10 +52,10 @@ La SDK local se resuelve vía SPM desde el directorio padre (`../Package.swift`)
 
 Requiere mock BQM con Firebase (ver [`.docs/sdk/mock-bqm-push-auth.md`](../../.docs/sdk/mock-bqm-push-auth.md)):
 
-1. **Copiar token FCM:** abrir la app → "Herramientas / debug" → "Copiar token FCM". Pegarlo en `SDK_MOCK_BQM_FCM_TEST_DEVICE_TOKEN` del backend.
+1. **Token FCM:** obtener el token FCM de este dispositivo (consola de Xcode) y pegarlo en `SDK_MOCK_BQM_FCM_TEST_DEVICE_TOKEN` del backend.
 2. **Admin Django:** en el `sdk.Client` de prueba, completar `ios_deep_link_url = iddigitalsample://sdkauth` (además de `android_deep_link_url` si se prueba Android).
 3. **Iniciar sesión con Keycloak:** botón correspondiente en la app.
-4. **Esperar la notificación:** el mock BQM envía push data-only; la app muestra notificación local. Al tocarla, completa sola "Resolver verificación pendiente" y llama `associate()`/`createValidationSession()` + `completeTransaction()`.
+4. **Esperar la notificación:** el mock BQM envía push data-only; la app muestra notificación local. Al tocarla, dispara automáticamente `associate()`/`createValidationSession()` seguido de `completeTransaction()`.
 
 Para probar **same-device** (sin push automática): login desde Safari mobile en el mismo iPhone con `ios_deep_link_url` configurado — la SPA navega a `iddigitalsample://sdkauth?transactionId=...` y la app abre sola.
 
@@ -65,9 +65,9 @@ Ver [`01-arquitectura-y-flujos.md`](../../.docs/sdk/cliente/01-arquitectura-y-fl
 
 1. En Django Admin → SDK → Clients, apuntar temporalmente `push_endpoint_url` del `sdk.Client` de prueba a una URL que devuelva `404` (o dejarlo vacío/inválido para que se agoten los reintentos) — cualquiera de los dos casos deja la transacción `IN_PROGRESS` con `sdk_push_failed=true` en vez de fallarla.
 2. **Iniciar sesión con Keycloak** desde un navegador (puede ser en la laptop, para probar el caso cross-device real). El backend crea la transacción pendiente y, al no poder confirmar la push, la pantalla de espera muestra el QR en el siguiente polling.
-3. En el iPhone (dispositivo físico, requiere cámara), abrir esta app. La sección **"Fallback QR cross-device"** (debajo de "Resolver verificación pendiente", pero independiente de ella — no usa `transactionId` ni depende de que haya llegado una push) enruta sola según si el dispositivo ya tiene una asociación local:
-   - **Sin asociación local:** muestra el botón **"Escanear QR (asociación)"**. Alternativamente, "Asociar vía QR" en "Herramientas / debug" hace lo mismo.
-   - **Con asociación local:** muestra un picker Pin/Liveness y el botón **"Escanear QR (validación)"**. Alternativamente, "Validar Pin/Liveness vía QR" en "Herramientas / debug" hace lo mismo.
+3. En el iPhone (dispositivo físico, requiere cámara), abrir esta app. La sección **"Fallback QR cross-device"** enruta sola según si el dispositivo ya tiene una asociación local:
+   - **Sin asociación local:** muestra el botón **"Escanear QR (asociación)"**.
+   - **Con asociación local:** muestra un picker Pin/Liveness y el botón **"Escanear QR (validación)"**.
 4. Tocar el botón correspondiente y apuntar la cámara al QR mostrado en el navegador. La SDK decodifica el token, corre Liveness/PIN, y cierra la transacción internamente — no hace falta llamar `completeTransaction()` por separado.
 5. El navegador (todavía en la pantalla de espera) debería reflejar el login como autorizado en el siguiente polling; el `finishUrl` que recibe la app es solo informativo y nunca se abre ahí, porque este camino es siempre cross-device.
 
@@ -77,9 +77,12 @@ La asociación por QR no solicita documento. El backend identifica al ciudadano 
 
 Requiere `NSCameraUsageDescription` en [`Info.plist`](IDDigitalSample/Info.plist) (ya incluido) — sin ella, iOS mata la app al pedir acceso a la cámara.
 
-## Sección "Herramientas / debug"
+## Sección "Asociación"
 
-Métodos SDK aislados (`associate`, `associateViaQrScan`, `validateViaQrScan`, `isAssociated`, `removeAssociation`, `createValidationSession`, `completeTransaction` manual) + copiar token FCM.
+Al final de la pantalla quedan dos controles:
+
+- **"Existe asociación?"** (`isAssociated()`) consulta solo el estado local del dispositivo, no el backend.
+- **"Eliminar"** (`removeAssociation()`) borra las dos puntas: hace `DELETE associations/` contra el backend y después limpia la asociación local y el PIN/biometría guardados. Útil para repetir la primera asociación sin reinstalar la app, y deja el fallback QR de vuelta en el camino de asociación.
 
 ## Fuera de alcance
 

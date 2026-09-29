@@ -37,10 +37,6 @@ struct PendingVerificationFlow: View {
     resolveStepState == .running || completeStepState == .running || qrStepState == .running
   }
 
-  private var canSubmit: Bool {
-    !transactionId.isEmpty && !isRunning
-  }
-
   private var canScanQr: Bool {
     !isRunning
   }
@@ -48,59 +44,6 @@ struct PendingVerificationFlow: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
       keycloakLoginSection
-
-      Divider().padding(.vertical, 8)
-
-      Text("Resolver verificación pendiente")
-        .font(.title2)
-      Text(
-        "Estos campos se completan solos al llegar el push cross-device real " +
-          "(ver README de este módulo). También se pueden completar a mano para " +
-          "probar sin depender de FCM."
-      )
-      .font(.footnote)
-      .foregroundStyle(.secondary)
-
-      TextField("transactionId", text: $transactionId)
-        .textFieldStyle(.roundedBorder)
-        .disabled(isRunning)
-
-      Picker("Tipo", selection: $pendingType) {
-        ForEach(PendingVerificationType.allCases) { type in
-          Text(type.rawValue).tag(type)
-        }
-      }
-      .pickerStyle(.segmented)
-      .disabled(isRunning)
-
-      switch pendingType {
-      case .association:
-        Text(
-          "El backend resuelve al ciudadano desde el transactionId (no hace falta " +
-            "ningún dato de documento acá)."
-        )
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-      case .validation:
-        Picker("Desafío", selection: $challengeType) {
-          Text("Pin").tag(ChallengeType.pin)
-          Text("Liveness").tag(ChallengeType.liveness)
-        }
-        .pickerStyle(.segmented)
-        .disabled(isRunning)
-      }
-
-      Button("Resolver") {
-        Task { await resolveAndComplete(openFinishUrl: true) }
-      }
-      .buttonStyle(.borderedProminent)
-      .disabled(!canSubmit)
-
-      stepRow(
-        label: pendingType == .association ? "Asociar dispositivo" : "Crear sesión de validación",
-        state: resolveStepState
-      )
-      stepRow(label: "Completar transacción", state: completeStepState)
 
       Divider().padding(.vertical, 8)
 
@@ -155,6 +98,32 @@ struct PendingVerificationFlow: View {
 
         stepRow(label: "Escanear QR, asociar y completar transacción", state: qrStepState)
       }
+
+      Divider().padding(.vertical, 8)
+
+      Text("Asociación")
+        .font(.title2)
+      Text(
+        "\"Existe asociación?\" consulta solo el estado local del dispositivo. " +
+          "\"Eliminar\" borra las dos puntas: la DeviceAssociation del backend, la " +
+          "asociación local y el PIN/biometría guardados. Después de eliminar, el " +
+          "fallback QR de arriba vuelve al camino de asociación."
+      )
+      .font(.footnote)
+      .foregroundStyle(.secondary)
+
+      Button("Existe asociación?") {
+        Task { await checkAssociation() }
+      }
+      .buttonStyle(.bordered)
+      .disabled(isRunning)
+
+      Button("Eliminar") {
+        Task { await removeAssociation() }
+      }
+      .buttonStyle(.bordered)
+      .tint(.red)
+      .disabled(isRunning)
     }
     .task {
       await refreshDeviceAssociation()
@@ -176,7 +145,7 @@ struct PendingVerificationFlow: View {
         .font(.title2)
       Text(
         "Abre el login de Keycloak. El backend de ID Digital va a crear ahí la " +
-          "transacción pendiente; copiá su id manualmente en el flujo de abajo."
+          "transacción pendiente; esta app la resuelve por push, deep link o el QR de abajo."
       )
       .font(.footnote)
       .foregroundStyle(.secondary)
@@ -255,13 +224,18 @@ struct PendingVerificationFlow: View {
     pendingType = push.type == "association" ? .association : .validation
   }
 
+  // Workaround de prueba (NO es el criterio de IDAPP-1002/1004): openFinishUrl=false.
+  // Hoy el backend genera un authorization code tanto cuando la app llama
+  // completeTransaction como en cada poll de la SPA. Keycloak consume el primero
+  // y rechaza el segundo. Hasta que el backend no deje de emitir finishUrl a la
+  // SPA en same-device, redirige solo la SPA. Mismo criterio que la sample Android.
   private func applyDeepLink(_ link: DeepLinkPayload) {
     transactionId = link.transactionId
     Task {
       await refreshDeviceAssociation()
       await MainActor.run {
         pendingType = isDeviceAssociated ? .validation : .association
-        Task { await resolveAndComplete(openFinishUrl: true) }
+        Task { await resolveAndComplete(openFinishUrl: false) }
       }
     }
   }
@@ -269,6 +243,20 @@ struct PendingVerificationFlow: View {
   @MainActor
   private func refreshDeviceAssociation() async {
     isDeviceAssociated = await IDDigitalClient.shared.isAssociated()
+  }
+
+  private func checkAssociation() async {
+    let associated = await IDDigitalClient.shared.isAssociated()
+    await MainActor.run {
+      isDeviceAssociated = associated
+      appState.showStatus(associated ? "Usuario ya se encuentra asociado" : "No existe usuario asociado")
+    }
+  }
+
+  private func removeAssociation() async {
+    await IDDigitalClient.shared.removeAssociation()
+    await refreshDeviceAssociation()
+    await MainActor.run { appState.showStatus("Asociación eliminada") }
   }
 
   private func completeTransaction(validationSessionId: String, openFinishUrl: Bool) async {
