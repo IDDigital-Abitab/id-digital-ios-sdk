@@ -2,7 +2,7 @@
 
 Esta app demuestra el Patrón B (puente web) descrito en [`.docs/sdk/cliente/`](../../.docs/sdk/cliente/README.md) y en [`.docs/sdk/primera-asociacion-app-integradora.md`](../../.docs/sdk/primera-asociacion-app-integradora.md) §2.2: login Keycloak → aviso de verificación pendiente → la SDK resuelve asociación o validación → `completeTransaction()` cierra el login.
 
-Tiene Firebase Cloud Messaging configurado (mismo proyecto Firebase del mock BQM que usa la app de ejemplo Android — simula la infraestructura FCM propia de un Integrador). El aviso que en producción llegaría por push (`transactionId`, `type`, `documentNumber`, ver [`03-endpoint-push.md`](../../.docs/sdk/cliente/03-endpoint-push.md)) llega como push data-only y la app muestra una notificación local; al tocarla resuelve sola la asociación/validación y completa la transacción — ver [`Push/PushNotificationHandler.swift`](IDDigitalSample/Push/PushNotificationHandler.swift). También se puede completar a mano en "Resolver verificación pendiente" para probar sin depender de FCM.
+El sample usa el bundle ID `uy.com.abitab.iddigital.sdk.sample` y Firebase Cloud Messaging del proyecto `id-digital-sdk-ios` de Abitab, el mismo que usa la app de ejemplo Android. Simula la infraestructura FCM propia de un Integrador. El aviso que en producción llegaría por push (`transactionId`, `type`, `documentNumber`, ver [`03-endpoint-push.md`](../../.docs/sdk/cliente/03-endpoint-push.md)) llega como push data-only y la app muestra una notificación local; al tocarla resuelve sola la asociación/validación y completa la transacción — ver [`Push/PushNotificationHandler.swift`](IDDigitalSample/Push/PushNotificationHandler.swift). También se puede completar a mano en "Resolver verificación pendiente" para probar sin depender de FCM.
 
 ## Requisitos
 
@@ -12,7 +12,7 @@ Tiene Firebase Cloud Messaging configurado (mismo proyecto Firebase del mock BQM
 
 ## Configuración previa
 
-1. **Secrets:** copiar [`IDDigitalSample/Config/Secrets.xcconfig.example`](IDDigitalSample/Config/Secrets.xcconfig.example) como `Example/Secrets.xcconfig` (gitignored) y completar:
+1. **Secrets:** copiar [`IDDigitalSample/Config/Secrets.xcconfig.example`](IDDigitalSample/Config/Secrets.xcconfig.example) como `IDDigitalSample/Config/Secrets.xcconfig` (gitignored) y completar:
 
 ```xcconfig
 SDK_ENVIRONMENT=STAGING
@@ -24,9 +24,9 @@ KEYCLOAK_CLIENT_ID=<client_id habilitado en ese realm para esta app>
 KEYCLOAK_REDIRECT_URI=iddigitalsample://auth
 ```
 
-   En Xcode, asignar `Secrets.xcconfig` como configuration file del target (Project → Info → Configurations) en lugar del `.example`, o editar el `.example` directamente para pruebas locales.
+   El target ya usa `Secrets.xcconfig` como configuration file (Project → Info → Configurations); si el archivo no existe, la app arranca con "Falta API_KEY en Secrets.xcconfig".
 
-2. **Firebase:** registrar una app iOS (`com.example.iddigital`) en el **mismo proyecto Firebase** del mock BQM (ver [`.docs/sdk/mock-bqm-push-auth.md`](../../.docs/sdk/mock-bqm-push-auth.md)), descargar `GoogleService-Info.plist` y colocarlo en [`IDDigitalSample/`](IDDigitalSample/) (gitignored).
+2. **Firebase:** [`GoogleService-Info.plist`](IDDigitalSample/GoogleService-Info.plist) ya está versionado e incluido en Copy Bundle Resources para la app iOS `uy.com.abitab.iddigital.sdk.sample` del proyecto `id-digital-sdk-ios`.
 
 3. **Capabilities en Xcode:** Push Notifications + Background Modes → Remote notifications (ya reflejado en [`IDDigitalSample.entitlements`](IDDigitalSample/IDDigitalSample.entitlements) e [`Info.plist`](IDDigitalSample/Info.plist)).
 
@@ -43,7 +43,7 @@ Al cambiar manualmente de `STAGING` a `PRODUCTION` con el mismo bundle ID, borra
 
 1. Abrir [`IDDigitalSample.xcodeproj`](IDDigitalSample.xcodeproj) en Xcode.
 2. Seleccionar un dispositivo físico como destino.
-3. Configurar **Signing & Capabilities** con tu Team de Apple Developer.
+3. El target firma de forma manual con el Team de Apple Developer de Abitab (`L87XNG5TDP`) y el perfil `ID Digital SDK Sample Distribution 2026` (App ID `uy.com.abitab.iddigital.sdk.sample`, APNs development). Hay que instalar ese perfil en la Mac (doble click en el `.mobileprovision`) y tener un certificado de desarrollo del Team; los perfiles `.mobileprovision` no se versionan.
 4. Run.
 
 La SDK local se resuelve vía SPM desde el directorio padre (`../Package.swift`).

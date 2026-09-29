@@ -23,7 +23,23 @@
 		A1000000000000000000000E /* IDDigitalSDK in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000051 /* IDDigitalSDK */; };
 		A1000000000000000000000F /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000052 /* FirebaseCore */; };
 		A10000000000000000000010 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000053 /* FirebaseMessaging */; };
+		A10000000000000000000011 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000031 /* GoogleService-Info.plist */; };
+		A10000000000000000000012 /* IDDigitalSDK in Embed Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000051 /* IDDigitalSDK */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A10000000000000000000073 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				A10000000000000000000012 /* IDDigitalSDK in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A10000000000000000000020 /* IDDigitalSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = IDDigitalSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -42,7 +58,9 @@
 		A1000000000000000000002D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000000000000000000002E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000000000000000000002F /* IDDigitalSample.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IDDigitalSample.entitlements; sourceTree = "<group>"; };
-		A10000000000000000000030 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Secrets.xcconfig.example; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
+		A10000000000000000000030 /* Secrets.xcconfig.example */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig.example; sourceTree = "<group>"; };
+		A10000000000000000000031 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A10000000000000000000032 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -84,6 +102,7 @@
 				A1000000000000000000002D /* Assets.xcassets */,
 				A1000000000000000000002E /* Info.plist */,
 				A1000000000000000000002F /* IDDigitalSample.entitlements */,
+				A10000000000000000000031 /* GoogleService-Info.plist */,
 			);
 			path = IDDigitalSample;
 			sourceTree = "<group>";
@@ -101,6 +120,7 @@
 			children = (
 				A10000000000000000000025 /* AppConfiguration.swift */,
 				A10000000000000000000030 /* Secrets.xcconfig.example */,
+				A10000000000000000000032 /* Secrets.xcconfig */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -164,6 +184,7 @@
 				A10000000000000000000071 /* Sources */,
 				A10000000000000000000040 /* Frameworks */,
 				A10000000000000000000072 /* Resources */,
+				A10000000000000000000073 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -205,7 +226,7 @@
 			);
 			mainGroup = A10000000000000000000060;
 			packageReferences = (
-				A100000000000000000000A0 /* XCLocalSwiftPackageReference "IDDigitalSDK" */,
+				A100000000000000000000A0 /* XCLocalSwiftPackageReference ".." */,
 				A100000000000000000000A1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = A10000000000000000000062 /* Products */;
@@ -223,6 +244,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000000000000000000000D /* Assets.xcassets in Resources */,
+				A10000000000000000000011 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -253,12 +275,14 @@
 /* Begin XCBuildConfiguration section */
 		A100000000000000000000B0 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A10000000000000000000030 /* Secrets.xcconfig.example */;
+			baseConfigurationReference = A10000000000000000000032 /* Secrets.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IDDigitalSample/IDDigitalSample.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = L87XNG5TDP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = IDDigitalSample/Info.plist;
@@ -270,8 +294,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.iddigital;
+				PRODUCT_BUNDLE_IDENTIFIER = uy.com.abitab.iddigital.sdk.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ID Digital SDK Sample Distribution 2026";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -280,12 +306,14 @@
 		};
 		A100000000000000000000B1 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = A10000000000000000000030 /* Secrets.xcconfig.example */;
+			baseConfigurationReference = A10000000000000000000032 /* Secrets.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = IDDigitalSample/IDDigitalSample.entitlements;
-				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = L87XNG5TDP;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = IDDigitalSample/Info.plist;
@@ -297,8 +325,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.iddigital;
+				PRODUCT_BUNDLE_IDENTIFIER = uy.com.abitab.iddigital.sdk.sample;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = "ID Digital SDK Sample Distribution 2026";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -363,7 +393,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		A100000000000000000000A0 /* XCLocalSwiftPackageReference "IDDigitalSDK" */ = {
+		A100000000000000000000A0 /* XCLocalSwiftPackageReference ".." */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ..;
 		};
@@ -383,7 +413,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		A10000000000000000000051 /* IDDigitalSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = A100000000000000000000A0 /* XCLocalSwiftPackageReference "IDDigitalSDK" */;
+			package = A100000000000000000000A0 /* XCLocalSwiftPackageReference ".." */;
 			productName = IDDigitalSDK;
 		};
 		A10000000000000000000052 /* FirebaseCore */ = {
