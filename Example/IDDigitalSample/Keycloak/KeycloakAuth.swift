@@ -53,39 +53,44 @@ enum KeycloakAuth {
     }
 
     return try await withCheckedThrowingContinuation { continuation in
-      let provider = PresentationContextProvider(anchor: presentationAnchor)
+      let attempt = LoginAttempt(anchor: presentationAnchor)
       let session = ASWebAuthenticationSession(
         url: authorizeURL,
         callbackURLScheme: "iddigitalsample"
       ) { callbackURL, error in
-        // Retenemos el provider para que no se desasigne por ARC antes de tiempo
-        _ = provider
-        
-        if let error {
-          continuation.resume(throwing: error)
-          return
-        }
-        guard let callbackURL else {
-          continuation.resume(throwing: KeycloakAuthError.missingCallbackURL)
-          return
-        }
-        if let result = parseRedirect(url: callbackURL) {
-          continuation.resume(returning: result)
-        } else {
+        attempt.finish {
+          if let error {
+            continuation.resume(throwing: error)
+            return
+          }
+          guard let callbackURL else {
+            continuation.resume(throwing: KeycloakAuthError.missingCallbackURL)
+            return
+          }
+          if let result = parseRedirect(url: callbackURL) {
+            continuation.resume(returning: result)
+            return
+          }
+          // El scheme iddigitalsample también lo usa el deep link same-device.
+          // La sesión se queda con esa URL y, si el callback entra otra vez, el
+          // segundo resume mata la app.
+          if DeepLinkHandler.payload(from: callbackURL) != nil {
+            AppState.shared.handleIncomingURL(callbackURL)
+            continuation.resume(throwing: KeycloakAuthError.followedDeepLink)
+            return
+          }
           continuation.resume(throwing: KeycloakAuthError.unrecognizedCallbackURL)
         }
       }
-      
-      session.presentationContextProvider = provider
+
+      attempt.session = session
+      session.presentationContextProvider = attempt
       session.prefersEphemeralWebBrowserSession = false
-      
+
       if !session.start() {
-        // En caso de que start() falle y NO haya llamado al completion handler, 
-        // fallamos nosotros. ASWebAuthenticationSession normalmente no llama al callback si start() da false sincrónicamente.
-        // Pero para evitar doble resume (como pasaba antes si se deallocaba el provider), 
-        // tener el _ = provider en el closure evita que falle de esa manera.
-        // Hacemos el resume manual en caso que el start() falle.
-        continuation.resume(throwing: KeycloakAuthError.failedToStartSession)
+        attempt.finish {
+          continuation.resume(throwing: KeycloakAuthError.failedToStartSession)
+        }
       }
     }
   }
@@ -115,6 +120,7 @@ enum KeycloakAuthError: LocalizedError {
   case missingCallbackURL
   case unrecognizedCallbackURL
   case failedToStartSession
+  case followedDeepLink
 
   var errorDescription: String? {
     switch self {
@@ -122,12 +128,15 @@ enum KeycloakAuthError: LocalizedError {
     case .missingCallbackURL: return "Keycloak no devolvió un redirect."
     case .unrecognizedCallbackURL: return "El redirect de Keycloak no es reconocible."
     case .failedToStartSession: return "No se pudo abrir la sesión de login."
+    case .followedDeepLink: return nil
     }
   }
 }
 
-private final class PresentationContextProvider: NSObject, ASWebAuthenticationPresentationContextProviding {
-  private let anchor: ASPresentationAnchor
+private final class LoginAttempt: NSObject, ASWebAuthenticationPresentationContextProviding {
+  let anchor: ASPresentationAnchor
+  var session: ASWebAuthenticationSession?
+  private var didResume = false
 
   init(anchor: ASPresentationAnchor) {
     self.anchor = anchor
@@ -135,5 +144,12 @@ private final class PresentationContextProvider: NSObject, ASWebAuthenticationPr
 
   func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
     anchor
+  }
+
+  func finish(_ body: () -> Void) {
+    guard !didResume else { return }
+    didResume = true
+    body()
+    session = nil
   }
 }
