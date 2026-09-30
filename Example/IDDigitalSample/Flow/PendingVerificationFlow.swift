@@ -214,6 +214,8 @@ struct PendingVerificationFlow: View {
 
     do {
       appState.keycloakRedirect = try await KeycloakAuth.launch(presentationAnchor: window)
+    } catch KeycloakAuthError.followedDeepLink {
+      return
     } catch {
       appState.showStatus(error.localizedDescription)
     }
@@ -287,7 +289,7 @@ struct PendingVerificationFlow: View {
       completeStepState = .idle
     }
 
-    guard let viewController = await MainActor.run(body: { UIApplication.shared.topMostViewController }) else {
+    guard let viewController = await UIApplication.shared.samplePresenter() else {
       await MainActor.run { resolveStepState = .failed("No hay view controller visible") }
       return
     }
@@ -330,7 +332,7 @@ struct PendingVerificationFlow: View {
   private func associateViaQrScan() async {
     await MainActor.run { qrStepState = .running }
 
-    guard let viewController = await MainActor.run(body: { UIApplication.shared.topMostViewController }) else {
+    guard let viewController = await UIApplication.shared.samplePresenter() else {
       await MainActor.run { qrStepState = .failed("No hay view controller visible") }
       return
     }
@@ -357,7 +359,7 @@ struct PendingVerificationFlow: View {
   private func validateViaQrScan() async {
     await MainActor.run { qrStepState = .running }
 
-    guard let viewController = await MainActor.run(body: { UIApplication.shared.topMostViewController }) else {
+    guard let viewController = await UIApplication.shared.samplePresenter() else {
       await MainActor.run { qrStepState = .failed("No hay view controller visible") }
       return
     }
