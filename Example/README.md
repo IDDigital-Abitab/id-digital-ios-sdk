@@ -48,6 +48,14 @@ Al cambiar manualmente de `STAGING` a `PRODUCTION` con el mismo bundle ID, borra
 
 La SDK local se resuelve vía SPM desde el directorio padre (`../Package.swift`).
 
+## Generar el build local
+
+La forma de instalar esta versión en un iPhone es Run desde Xcode, con el perfil `ID Digital SDK Sample Distribution 2026` ya instalado en la Mac y el dispositivo registrado en ese perfil. El bundle es `uy.com.abitab.iddigital.sdk.sample` y la versión es `1.0.0` (build `1`).
+
+No hay un script que exporte un IPA. Product → Archive en Xcode arma el archive; para compartirlo hay que exportarlo con un perfil que cubra el dispositivo (el del proyecto es de development, a pesar del nombre). El perfil Ad Hoc es otro archivo y no está configurado en el target.
+
+GitHub Actions no genera esta app. `ios-ci.yml` corre los tests del paquete `IDDigitalSDK` en el simulador, sin firmar, en pull requests y en `main`. `release.yml` publica el XCFramework del SDK, no el sample. `api-docs.yml` genera DocC y solo corre en `main`. La rama `sample/min-stg-1.0.0-dev` además no está en el remoto, así que ningún workflow puede checkoutearla.
+
 ## Cómo correr el flujo completo (con push real)
 
 Requiere mock BQM con Firebase (ver [`.docs/sdk/mock-bqm-push-auth.md`](../../.docs/sdk/mock-bqm-push-auth.md)):
