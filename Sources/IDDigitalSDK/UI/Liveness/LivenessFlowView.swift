@@ -3,15 +3,19 @@ import SwiftUI
 
 struct LivenessFlowView: View {
   let challengeId: String
-  
-  
+
+  private let maxValidationAttempts = 3
+
   @State private var currentScreen: LivenessScreen = .instructions
   @State private var livenessSessionId: String? = nil
-  
-  
+  @State private var validationFailures = 0
+  @State private var didExhaustAttempts = false
+  @State private var didStartValidation = false
+
   var onComplete: () -> Void
   var onBack: () -> Void
   var onClose: () -> Void
+  var onAttemptsExhausted: (IDDigitalError) -> Void
   
   var body: some View {
     VStack {
@@ -25,7 +29,7 @@ struct LivenessFlowView: View {
                 self.livenessSessionId = try await executeLivenessUseCase.execute(challengeId: self.challengeId)
                 self.currentScreen = .detector
               } catch {
-                self.currentScreen = .error
+                self.handleExecuteFailure(error)
               }
             }
           },
@@ -50,13 +54,15 @@ struct LivenessFlowView: View {
       case .validating:
         LoadingView()
           .onAppear {
+            guard !didStartValidation else { return }
+            didStartValidation = true
             Task {
               do {
                 let validateLivenessUseCase = Container.shared.validateLivenessChallengeUseCase()
                 _ = try await validateLivenessUseCase.execute(challengeId: self.challengeId)
                 self.currentScreen = .completed
               } catch {
-                self.currentScreen = .error
+                self.registerValidationFailure(error)
               }
             }
           }
@@ -64,6 +70,7 @@ struct LivenessFlowView: View {
         LivenessErrorScreen(
           onRetry: {
             self.livenessSessionId = nil
+            self.didStartValidation = false
             self.currentScreen = .instructions
           },
           onClose: onClose
@@ -73,6 +80,38 @@ struct LivenessFlowView: View {
           .onAppear(perform: onComplete)
       }
     }
+  }
+
+  /// Un `too-many-attempts` del backend cierra el flujo: reintentar vuelve a
+  /// fallar antes de abrir la cámara. El resto de fallos de execute (red,
+  /// permiso) sigue ofreciendo reintento y no cuenta como validación.
+  private func handleExecuteFailure(_ error: Error) {
+    if case IDDigitalError.tooManyAttempts = error {
+      exhaust(.tooManyAttempts)
+    } else {
+      currentScreen = .error
+    }
+  }
+
+  /// Igual que Android: solo cuenta el resultado de validate. Al tercer fallo
+  /// cierra la prueba de vida en lugar de volver a instrucciones.
+  private func registerValidationFailure(_ error: Error) {
+    if case IDDigitalError.tooManyAttempts = error {
+      exhaust(.tooManyAttempts)
+      return
+    }
+    validationFailures += 1
+    if validationFailures >= maxValidationAttempts {
+      exhaust(.challengeValidationFailed(cause: error))
+    } else {
+      currentScreen = .error
+    }
+  }
+
+  private func exhaust(_ error: IDDigitalError) {
+    guard !didExhaustAttempts else { return }
+    didExhaustAttempts = true
+    onAttemptsExhausted(error)
   }
 }
 
