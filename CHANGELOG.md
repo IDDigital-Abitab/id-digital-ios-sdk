@@ -4,6 +4,11 @@ Todos los cambios notables de este SDK se documentan en este archivo.
 
 ## Próxima versión
 
+### Corrección: el PIN se cierra al tercer intento incorrecto
+
+- Tres `invalid-pin` seguidos cierran la pantalla y devuelven error de validación. Antes el teclado seguía abierto y un PIN correcto posterior se mostraba como incorrecto.
+- `too-many-attempts` y un 400 de challenge ya terminado también cierran. Un corte de red o un 5xx no cuentan como PIN incorrecto.
+
 ### Breaking change: superficie pública previa a producción
 
 - Se elimina `sendToKeycloak()`. Ese método pertenecía al direct grant del POC y fue

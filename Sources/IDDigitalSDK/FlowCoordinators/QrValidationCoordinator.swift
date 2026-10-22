@@ -122,8 +122,8 @@ final class QrValidationCoordinator {
         onClose: {
           if !hasResumed { hasResumed = true; self.navigationController?.dismiss(animated: true); continuation.resume(throwing: IDDigitalError.userCancelled()) }
         },
-        onTooManyAttempts: {
-          continuation.resume(throwing: IDDigitalError.tooManyAttempts)
+        onAttemptsExhausted: { error in
+          if !hasResumed { hasResumed = true; self.navigationController?.dismiss(animated: true); continuation.resume(throwing: error) }
         },
         shouldShowBiometricToggle: shouldShowBiometricToggle,
         isBiometricEnabled: isBiometricEnabled,
