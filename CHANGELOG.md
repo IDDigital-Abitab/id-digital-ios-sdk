@@ -4,6 +4,13 @@ Todos los cambios notables de este SDK se documentan en este archivo.
 
 ## Próxima versión
 
+### Corrección: el liveness se cierra cuando el challenge ya no se puede ejecutar
+
+- `execute` con código `expired-challenge` cierra la prueba de vida. Antes volvía a la pantalla de reintento y la cámara no abría, porque el backend ya había dejado el challenge en `FAILED`.
+- Un 400 de challenge ya terminado (sesión vencida, sin ese código) hace lo mismo.
+- Nuevo caso público `IDDigitalError.expiredChallenge`. Quien haga `switch` exhaustivo sobre `IDDigitalError` tiene que agregar este caso.
+- Un corte de red o un permiso de cámara denegado siguen ofreciendo reintento.
+
 ### Breaking change: superficie pública previa a producción
 
 - Se elimina `sendToKeycloak()`. Ese método pertenecía al direct grant del POC y fue

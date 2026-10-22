@@ -169,8 +169,14 @@ final class DeviceAssociationCoordinator {
             self.navigationController?.dismiss(animated: true)
             continuation.resume(throwing: IDDigitalError.userCancelled())
           }
+        },
+        onAttemptsExhausted: { error in
+          if !hasResumed {
+            hasResumed = true
+            self.navigationController?.dismiss(animated: true)
+            continuation.resume(throwing: error)
+          }
         }
-        
       )
       
       let hostingController = UIHostingController(rootView: livenessView)

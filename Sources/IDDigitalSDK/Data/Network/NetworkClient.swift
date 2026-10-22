@@ -112,6 +112,9 @@ final class DefaultNetworkClient: NetworkClient {
         if errorResponse.code == "too-many-attempts" {
           throw IDDigitalError.tooManyAttempts
         }
+        if errorResponse.code == "expired-challenge" {
+          throw IDDigitalError.expiredChallenge
+        }
         if errorResponse.code == "invalid-device-association-token" {
           // Local storage said an association exists, but the backend no longer
           // recognizes its token (e.g. deactivated/removed on ID Digital's side).

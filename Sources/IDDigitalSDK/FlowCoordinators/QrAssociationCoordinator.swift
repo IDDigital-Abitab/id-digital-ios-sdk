@@ -213,6 +213,13 @@ final class QrAssociationCoordinator {
             self.navigationController?.dismiss(animated: true)
             continuation.resume(throwing: IDDigitalError.userCancelled())
           }
+        },
+        onAttemptsExhausted: { error in
+          if !hasResumed {
+            hasResumed = true
+            self.navigationController?.dismiss(animated: true)
+            continuation.resume(throwing: error)
+          }
         }
       )
 
