@@ -10,7 +10,7 @@ struct PinEntryView: View {
   var onBiometric: () -> Void
   var onBack: () -> Void
   var onClose: () -> Void
-  var onTooManyAttempts: () -> Void = { }
+  var onAttemptsExhausted: (IDDigitalError) -> Void = { _ in }
   
   @State private var pin: String = ""
   @State private var showError: Bool = false
@@ -18,6 +18,8 @@ struct PinEntryView: View {
   @State private var saveBiometrics: Bool = true
   @State private var isProcessing: Bool = false
   @State private var biometricAttempted: Bool = false
+  @State private var invalidPinAttempts = 0
+  @State private var didExhaustAttempts = false
   
   var shouldShowBiometricToggle: Bool
   var isBiometricEnabled: Bool
@@ -90,7 +92,7 @@ struct PinEntryView: View {
   }
   
   private func submitPin() {
-    guard pin.count == pinLength, !isProcessing else { return }
+    guard pin.count == pinLength, !isProcessing, !didExhaustAttempts else { return }
     
     isProcessing = true
     showError = false
@@ -100,22 +102,36 @@ struct PinEntryView: View {
         let validatePinUseCase = Container.shared.validatePinChallengeUseCase()
         try await validatePinUseCase.execute(challengeId: self.challengeId, pin: self.pin)
         onComplete(self.pin, self.saveBiometrics)
-      } catch let error as IDDigitalError {
-        if case .tooManyAttempts = error {
-          onTooManyAttempts()
-        } else {
-          self.showError = true
-          self.pin = ""
-          DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            self.showError = false
-          }
-        }
       } catch {
-        self.showError = true
-        self.pin = ""
+        applyFailure(error)
       }
-      isProcessing = false
+      if !didExhaustAttempts {
+        isProcessing = false
+      }
     }
+  }
+
+  private func applyFailure(_ error: Error) {
+    let (action, attempts) = PinAttemptPolicy.action(for: error, invalidAttempts: invalidPinAttempts)
+    invalidPinAttempts = attempts
+    switch action {
+    case .showWrongPin:
+      showError = true
+      pin = ""
+      DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+        showError = false
+      }
+    case .close(let terminal):
+      exhaust(terminal)
+    case .stay:
+      pin = ""
+    }
+  }
+
+  private func exhaust(_ error: IDDigitalError) {
+    guard !didExhaustAttempts else { return }
+    didExhaustAttempts = true
+    onAttemptsExhausted(error)
   }
   
   private func openIDDigitalApp() {
