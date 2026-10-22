@@ -35,6 +35,9 @@ public enum IDDigitalError: Error, LocalizedError {
     /// El Usuario agotó los intentos permitidos para el desafío.
     case tooManyAttempts
 
+    /// El desafío ya no se puede ejecutar: expiró, falló o llegó al tope de ejecuciones.
+    case expiredChallenge
+
     /// El dispositivo no tiene una asociación activa.
     case deviceNotAssociated
 
@@ -97,6 +100,8 @@ public enum IDDigitalError: Error, LocalizedError {
             return "Invalid document: \(reason)"
         case .tooManyAttempts:
             return "Too many attempts"
+        case .expiredChallenge:
+            return "The challenge has expired."
         case .deviceNotAssociated:
             return "Device is not associated."
         case .invalidChallengeId(let reason, _):

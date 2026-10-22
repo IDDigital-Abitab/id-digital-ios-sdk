@@ -82,12 +82,12 @@ struct LivenessFlowView: View {
     }
   }
 
-  /// Un `too-many-attempts` del backend cierra el flujo: reintentar vuelve a
-  /// fallar antes de abrir la cámara. El resto de fallos de execute (red,
-  /// permiso) sigue ofreciendo reintento y no cuenta como validación.
+  /// Un challenge que ya no se puede ejecutar cierra el flujo: reintentar
+  /// vuelve a fallar antes de abrir la cámara. Un corte de red o un permiso
+  /// de cámara denegado sigue ofreciendo reintento y no cuenta como validación.
   private func handleExecuteFailure(_ error: Error) {
-    if case IDDigitalError.tooManyAttempts = error {
-      exhaust(.tooManyAttempts)
+    if let terminal = terminalChallengeError(error) {
+      exhaust(terminal)
     } else {
       currentScreen = .error
     }
@@ -96,8 +96,8 @@ struct LivenessFlowView: View {
   /// Igual que Android: solo cuenta el resultado de validate. Al tercer fallo
   /// cierra la prueba de vida en lugar de volver a instrucciones.
   private func registerValidationFailure(_ error: Error) {
-    if case IDDigitalError.tooManyAttempts = error {
-      exhaust(.tooManyAttempts)
+    if let terminal = terminalChallengeError(error) {
+      exhaust(terminal)
       return
     }
     validationFailures += 1
@@ -105,6 +105,20 @@ struct LivenessFlowView: View {
       exhaust(.challengeValidationFailed(cause: error))
     } else {
       currentScreen = .error
+    }
+  }
+
+  /// `expired-challenge`, `too-many-attempts` o un 400 de challenge ya terminado.
+  /// En esos casos el backend no crea otra sesión de liveness.
+  private func terminalChallengeError(_ error: Error) -> IDDigitalError? {
+    guard let idError = error as? IDDigitalError else { return nil }
+    switch idError {
+    case .tooManyAttempts, .expiredChallenge:
+      return idError
+    case .badResponse(let statusCode, _, _) where statusCode == 400:
+      return idError
+    default:
+      return nil
     }
   }
 
