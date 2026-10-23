@@ -26,29 +26,48 @@ final class QrValidationCoordinator {
   }
 
   func start() async throws -> String? {
-    let transactionId = try await scanQrCode()
+    do {
+      let transactionId = try await scanQrCode()
 
-    let createUseCase = Container.shared.createValidationSessionUseCase()
-    let validationSession = try await createUseCase.execute(type: challengeType)
+      let createUseCase = Container.shared.createValidationSessionUseCase()
+      let validationSession = try await createUseCase.execute(type: challengeType)
 
-    guard let challenge = validationSession.challenges.first else {
-      throw IDDigitalError.unknown(cause: nil)
+      guard let challenge = validationSession.challenges.first else {
+        throw IDDigitalError.unknown(cause: nil)
+      }
+
+      switch challenge.type {
+      case .pin:
+        try await runPinChallenge(for: challenge)
+      case .liveness:
+        try await runLivenessChallenge(for: challenge)
+      }
+
+      let completeTransactionUseCase = Container.shared.completeTransactionUseCase()
+      let finishUrl = try await completeTransactionUseCase.execute(
+        transactionId: transactionId,
+        validationSessionId: validationSession.id
+      )
+      await dismissPresentedFlow()
+      return finishUrl
+    } catch {
+      await dismissPresentedFlow()
+      throw error
     }
+  }
 
-    switch challenge.type {
-    case .pin:
-      try await runPinChallenge(for: challenge)
-    case .liveness:
-      try await runLivenessChallenge(for: challenge)
+  /// Cierra el modal y espera a que termine. Si se cierra antes (X del usuario) no
+  /// vuelve a llamar a dismiss: el completion de un dismiss ya en curso no siempre corre
+  /// y la continuation quedaría colgada. El caller muestra el error recién después.
+  private func dismissPresentedFlow() async {
+    guard let navigationController else { return }
+    guard navigationController.presentingViewController != nil else { return }
+    guard !navigationController.isBeingDismissed else { return }
+    await withCheckedContinuation { continuation in
+      navigationController.dismiss(animated: true) {
+        continuation.resume()
+      }
     }
-
-    navigationController?.dismiss(animated: true)
-
-    let completeTransactionUseCase = Container.shared.completeTransactionUseCase()
-    return try await completeTransactionUseCase.execute(
-      transactionId: transactionId,
-      validationSessionId: validationSession.id
-    )
   }
 
   private func scanQrCode() async throws -> String {

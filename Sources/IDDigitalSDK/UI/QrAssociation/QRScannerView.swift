@@ -54,12 +54,20 @@ private struct QRCodeScannerRepresentable: UIViewControllerRepresentable {
   }
 
   func updateUIViewController(_ uiViewController: QRCodeScannerViewController, context: Context) {}
+
+  static func dismantleUIViewController(_ uiViewController: QRCodeScannerViewController, coordinator: ()) {
+    uiViewController.stopCapturing()
+  }
 }
 
 private final class QRCodeScannerViewController: UIViewController, @preconcurrency AVCaptureMetadataOutputObjectsDelegate {
   var onScanned: ((String) -> Void)?
 
   private let captureSession = AVCaptureSession()
+  /// start/stop van siempre por acá. AVCaptureSession no es thread-safe: el callback
+  /// (cola main) y viewWillDisappear (al pushear el PIN) no pueden parar la sesión a
+  /// la vez en colas distintas. El stop se encola y corre después de volver del callback.
+  private let sessionQueue = DispatchQueue(label: "uy.com.abitab.iddigital.qr-capture")
   private var previewLayer: AVCaptureVideoPreviewLayer?
   private var didReportResult = false
 
@@ -71,16 +79,24 @@ private final class QRCodeScannerViewController: UIViewController, @preconcurren
 
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
-    guard !captureSession.inputs.isEmpty, !captureSession.isRunning else { return }
-    DispatchQueue.global(qos: .userInitiated).async { [captureSession] in
+    sessionQueue.async { [captureSession] in
+      guard !captureSession.inputs.isEmpty, !captureSession.isRunning else { return }
       captureSession.startRunning()
     }
   }
 
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
-    guard captureSession.isRunning else { return }
-    DispatchQueue.global(qos: .userInitiated).async { [captureSession] in
+    stopSession()
+  }
+
+  func stopCapturing() {
+    stopSession()
+  }
+
+  private func stopSession() {
+    sessionQueue.async { [captureSession] in
+      guard captureSession.isRunning else { return }
       captureSession.stopRunning()
     }
   }
@@ -133,9 +149,10 @@ private final class QRCodeScannerViewController: UIViewController, @preconcurren
       return
     }
     didReportResult = true
-    DispatchQueue.global(qos: .userInitiated).async { [captureSession] in
-      captureSession.stopRunning()
+    let notify = onScanned
+    stopSession()
+    DispatchQueue.main.async {
+      notify?(stringValue)
     }
-    onScanned?(stringValue)
   }
 }
