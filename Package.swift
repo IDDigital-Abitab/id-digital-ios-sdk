@@ -44,7 +44,10 @@ let package = Package(
     ),
     .testTarget(
       name: "IDDigitalSDKTests",
-      dependencies: ["IDDigitalSDK"]
+      dependencies: [
+        "IDDigitalSDK",
+        .product(name: "FactoryKit", package: "Factory"),
+      ]
     ),
   ]
 )

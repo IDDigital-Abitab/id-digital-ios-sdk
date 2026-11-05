@@ -46,11 +46,16 @@ public final actor IDDigitalClient {
       return trimmed.isEmpty ? nil : trimmed
     }
     Container.shared.cognitoAppClientIdOverride.register { cognitoAppClientIdOverride }
-    try await AmplifyInitializer.initialize()
+    try await Container.shared.sdkBootstrap().bootstrap()
     self.isInitialized = true
     print("IDDigitalSDK initialized successfully.")
   }
   
+  /// Vuelve el singleton al estado previo a `initialize()` para aislar tests.
+  func resetForTesting() {
+    isInitialized = false
+  }
+
   private func ensureInitialized() throws {
     guard isInitialized else {
       throw IDDigitalError.notInitialized
