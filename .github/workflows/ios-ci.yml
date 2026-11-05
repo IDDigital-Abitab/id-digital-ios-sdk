@@ -67,10 +67,17 @@ jobs:
 
       - name: Run SDK tests
         run: |
+          rm -rf "$DERIVED_DATA_PATH/TestResults.xcresult"
           xcodebuild test \
             -scheme IDDigitalSDK \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             -derivedDataPath "$DERIVED_DATA_PATH" \
             -clonedSourcePackagesDirPath "$SOURCE_PACKAGES_PATH" \
+            -resultBundlePath "$DERIVED_DATA_PATH/TestResults.xcresult" \
+            -enableCodeCoverage YES \
+            -parallel-testing-enabled NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=YES
+
+      - name: Check SDK line coverage
+        run: python3 scripts/check-sdk-coverage.py "$DERIVED_DATA_PATH/TestResults.xcresult"

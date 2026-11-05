@@ -19,6 +19,11 @@ extension Container {
     self { nil }.singleton
   }
   
+  /// Arranque de Amplify. La instancia de producción configura Cognito; los tests la reemplazan.
+  var sdkBootstrap: Factory<SDKBootstrapping> {
+    self { AmplifySDKBootstrap() }.singleton
+  }
+
   // --- Services ---
   var deviceIdentifierProvider: Factory<DeviceIdentifierProviding> { self { DeviceIdentifierProvider() }.singleton }
   var networkClient: Factory<NetworkClient> { self { DefaultNetworkClient() }.singleton }

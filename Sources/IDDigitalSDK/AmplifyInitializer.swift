@@ -3,6 +3,18 @@ import Foundation
 @_implementationOnly import AWSCognitoAuthPlugin
 @_implementationOnly import FactoryKit
 
+/// Arranque de Amplify. Los tests registran otra implementación para no configurar
+/// Amplify, que solo admite una configuración por proceso.
+protocol SDKBootstrapping: Sendable {
+  func bootstrap() async throws
+}
+
+struct AmplifySDKBootstrap: SDKBootstrapping {
+  func bootstrap() async throws {
+    try await AmplifyInitializer.initialize()
+  }
+}
+
 final class AmplifyInitializer {
   static func initialize() async throws {
     let configService = Container.shared.configService()

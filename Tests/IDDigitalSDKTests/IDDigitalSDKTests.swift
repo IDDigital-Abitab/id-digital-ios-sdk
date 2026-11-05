@@ -3,34 +3,6 @@ import XCTest
 import UIKit
 import IDDigitalSDK
 
-final class IDDigitalSDKTests: XCTestCase {
-  func testGetDeviceAssociationBeforeInitializeThrows() async {
-    do {
-      _ = try await IDDigitalClient.shared.getDeviceAssociation()
-      XCTFail("Expected notInitialized before initialize()")
-    } catch IDDigitalError.notInitialized {
-      // Expected contract.
-    } catch {
-      XCTFail("Expected notInitialized, got \(error)")
-    }
-  }
-
-  func testParseAuthenticationLink() {
-    let url = URL(string: "iddigital://authenticate?transactionId=transaction-123")!
-
-    XCTAssertEqual(
-      IDDigitalClient.parseAuthenticationLink(url: url),
-      "transaction-123"
-    )
-  }
-
-  func testParseAuthenticationLinkWithoutTransactionReturnsNil() {
-    let url = URL(string: "iddigital://authenticate?code=oidc-code")!
-
-    XCTAssertNil(IDDigitalClient.parseAuthenticationLink(url: url))
-  }
-}
-
 // This function is intentionally not executed. Compiling the test target verifies that the
 // supported integration surface remains accessible to an external Swift module.
 private func compilePublicContract(
